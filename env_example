@@ -1,4 +1,6 @@
 # fill this and rename to .env
 DISCORD_TOKEN=XXX
 SPREADSHEET_ID=XXX
+LOG_CHANNEL=XXX
+BOT_CHANNEL=XXX
 
