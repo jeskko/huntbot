@@ -134,7 +134,6 @@ async def update_channel(server, status, started, legacy=None):
     if chan.name != newname:
         print("need to update name")
         await chan.edit(name=newname)
-        await bot_log(f"Channel name edited for {server}. New status: {status}")
     else:
         print("no need to update name")
 
