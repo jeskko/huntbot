@@ -371,6 +371,10 @@ async def getstatus(ctx, legacy="0"):
 
 @bot.command(name="advertise", aliases=['ad','shout'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb")')
 async def advertise(ctx, world, start, legacy="0"):
+    if ctx.channel.id != BOT_CHANNEL:
+        print (f"{BOT_CHANNEL} != {ctx.channel.id}")
+        return
+
     world=parse_world(world)
     parm=parse_parameters(None,legacy)
     l=parm[1]
