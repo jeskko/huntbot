@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+import asyncio
+
 import os
 import datetime
 import discord
@@ -22,6 +24,9 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
 from apiclient import discovery
+
+from discord_webhook import DiscordWebhook
+
 import httplib2
 
 def parse_world(world):
@@ -362,6 +367,49 @@ async def getstatus(ctx, legacy="0"):
     msg=await update_from_sheets_to_chat(leg)
     await ctx.send(msg)
     await ctx.message.add_reaction("✅")
+
+@bot.command(name="advertise", aliases=['ad','shout'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb")')
+async def advertise(ctx, world, start, legacy="0"):
+    world=parse_world(world)
+    parm=parse_parameters(None,legacy)
+    l=parm[1]
+    if l==0:
+        msg=f"About to send this notification: ```@Shadowbringers_role [{world}] Hunt train starting in 10 minutes at {start}.```React with ✅ to send or wait 15 seconds to cancel."
+    if l==1:
+        msg=f"About to send this notification: ```@Stormblood_role [{world}] Hunt train starting in 10 minutes at {start}.```React with ✅ to send or wait 15 seconds to cancel."
+
+    msg1=await ctx.send(msg)
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
+
+    try:
+        res=await bot.wait_for("reaction_add", check=check,timeout=15)
+    except asyncio.TimeoutError:
+        print ("Timed out")
+        await msg1.delete()
+        await ctx.message.add_reaction('❌')
+        pass
+    else:
+        if res:
+            reaction, user=res
+            print (reaction.emoji)
+
+# faloop style
+
+            mentions={
+                "roles": [897073980551340063, 897074097169784863]
+            }
+            if l==0:
+                msg=f"<@&897074097169784863> [{world}] Hunt train starting in 10 minutes at {start}."
+            if l==1:
+                msg=f"<@&897073980551340063> [{world}] Hunt train starting in 10 minutes at {start}."
+            webhook = DiscordWebhook(url='https://discord.com/api/webhooks/896523649270579210/U58_HpScTbLqZ8fO4rgmCchC_jg9L-zEkzLXGWri0U5tBS4zkMvrdNoBHJ4qA-IxyQNb',rate_limit_retry=True,content=msg,allowed_mentions=mentions)
+            resp=webhook.execute()
+            await msg1.delete()
+            await ctx.message.add_reaction('✅')
+
 
 @bot.event
 async def on_ready():

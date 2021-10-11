@@ -6,6 +6,7 @@ certifi==2021.5.30
 chardet==4.0.0
 charset-normalizer==2.0.6
 discord==1.7.3
+discord-webhook==0.14.0
 discord.py==1.7.3
 google-api-core==2.0.1
 google-api-python-client==2.21.0
