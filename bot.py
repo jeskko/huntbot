@@ -410,7 +410,7 @@ async def advertise(ctx, world, start, legacy="0"):
                 msg=f"<@&897074097169784863> [{world}] Hunt train starting in 10 minutes at {start}."
             if l==1:
                 msg=f"<@&897073980551340063> [{world}] Hunt train starting in 10 minutes at {start}."
-            webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions)
+            webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
             await msg1.delete()
             await ctx.message.add_reaction('✅')
