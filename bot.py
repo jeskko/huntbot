@@ -276,6 +276,7 @@ TOKEN=os.getenv('DISCORD_TOKEN')
 SPREADSHEET_ID=os.getenv('SPREADSHEET_ID')
 LOG_CHANNEL=int(os.getenv('LOG_CHANNEL'))
 BOT_CHANNEL=int(os.getenv('BOT_CHANNEL'))
+WEBHOOK_TEST=os.getenv('WEBHOOK_TEST')
 
 ready = 0
 
@@ -405,7 +406,7 @@ async def advertise(ctx, world, start, legacy="0"):
                 msg=f"<@&897074097169784863> [{world}] Hunt train starting in 10 minutes at {start}."
             if l==1:
                 msg=f"<@&897073980551340063> [{world}] Hunt train starting in 10 minutes at {start}."
-            webhook = DiscordWebhook(url='https://discord.com/api/webhooks/896523649270579210/U58_HpScTbLqZ8fO4rgmCchC_jg9L-zEkzLXGWri0U5tBS4zkMvrdNoBHJ4qA-IxyQNb',rate_limit_retry=True,content=msg,allowed_mentions=mentions)
+            webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions)
             resp=webhook.execute()
             await msg1.delete()
             await ctx.message.add_reaction('✅')
