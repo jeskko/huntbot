@@ -369,19 +369,21 @@ async def getstatus(ctx, legacy="0"):
     await ctx.send(msg)
     await ctx.message.add_reaction("✅")
 
-@bot.command(name="advertise", aliases=['ad','shout'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb")')
+@bot.command(name="advertise", aliases=['ad','shout','sh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb")')
 async def advertise(ctx, world, start, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
 
+    username=ctx.message.author.display_name
+
     world=parse_world(world)
     parm=parse_parameters(None,legacy)
     l=parm[1]
     if l==0:
-        msg=f"About to send this notification: ```@Shadowbringers_role [{world}] Hunt train starting in 10 minutes at {start}.```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification: ```@Shadowbringers_role [{world}] Hunt train starting in 10 minutes at {start} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification: ```@Stormblood_role [{world}] Hunt train starting in 10 minutes at {start}.```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification: ```@Stormblood_role [{world}] Hunt train starting in 10 minutes at {start} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
 
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -407,13 +409,60 @@ async def advertise(ctx, world, start, legacy="0"):
                 "roles": [897073980551340063, 897074097169784863]
             }
             if l==0:
-                msg=f"<@&897074097169784863> [{world}] Hunt train starting in 10 minutes at {start}."
+                msg=f"<@&897074097169784863> [{world}] Hunt train starting in 10 minutes at {start} ({username})."
             if l==1:
-                msg=f"<@&897073980551340063> [{world}] Hunt train starting in 10 minutes at {start}."
+                msg=f"<@&897073980551340063> [{world}] Hunt train starting in 10 minutes at {start} ({username})."
             webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
             await msg1.delete()
             await ctx.message.add_reaction('✅')
+
+@bot.command(name="advmanual", aliases=['adm','mshout','msh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb")')
+async def advertise(ctx, message, legacy="0"):
+    if ctx.channel.id != BOT_CHANNEL:
+        print (f"{BOT_CHANNEL} != {ctx.channel.id}")
+        return
+    username=ctx.message.author.display_name
+
+    parm=parse_parameters(None,legacy)
+    l=parm[1]
+    if l==0:
+        msg=f"About to send this notification: ```@Shadowbringers_role {message} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
+    if l==1:
+        msg=f"About to send this notification: ```@Stormblood_role {message} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
+
+    msg1=await ctx.send(msg)
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
+
+    try:
+        res=await bot.wait_for("reaction_add", check=check,timeout=15)
+    except asyncio.TimeoutError:
+        print ("Timed out")
+        await msg1.delete()
+        await ctx.message.add_reaction('❌')
+        pass
+    else:
+        if res:
+            reaction, user=res
+            print (reaction.emoji)
+
+# faloop style
+
+            mentions={
+                "roles": [897073980551340063, 897074097169784863]
+            }
+            if l==0:
+                msg=f"<@&897074097169784863> {message} ({username})."
+            if l==1:
+                msg=f"<@&897073980551340063> {message} ({username})."
+            webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+            await msg1.delete()
+            await ctx.message.add_reaction('✅')
+
 
 
 @bot.event
