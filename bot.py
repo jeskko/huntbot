@@ -281,6 +281,8 @@ WEBHOOK_ESC=os.getenv('WEBHOOK_ESC_FC')
 WEBHOOK_CC=os.getenv('WEBHOOK_CC')
 WEBHOOK_CH=os.getenv('WEBHOOK_CH')
 WEBHOOK_ANGEL=os.getenv('WEBHOOK_ANGEL')
+WEBHOOK_FALOOP=os.getenv('WEBHOOK_FALOOP')
+WEBHOOK_WRKJN=os.getenv('WEBHOOK_WRKJN')
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
 ROLE_STB_TEST=int(os.getenv('ROLE_TEST_STB'))
 ROLE_SHB_ESC=int(os.getenv('ROLE_ESC_FC'))
@@ -289,6 +291,8 @@ ROLE_SHB_CC=int(os.getenv('ROLE_CC_SHB'))
 ROLE_STB_CC=int(os.getenv('ROLE_CC_STB'))
 ROLE_SHB_CH=int(os.getenv('ROLE_CH_SHB'))
 ROLE_STB_CH=int(os.getenv('ROLE_CH_STB'))
+ROLE_SHB_FALOOP=int(os.getenv('ROLE_FALOOP_SHB'))
+ROLE_STB_FALOOP=int(os.getenv('ROLE_FALOOP_STB'))
 
 ready = 0
 
@@ -393,9 +397,9 @@ async def advertise(ctx, world, start, legacy="0"):
     parm=parse_parameters(None,legacy)
     l=parm[1]
     if l==0:
-        msg=f"About to send this notification to CH and CC servers: ```@Shadowbringers_role [{world}] Hunt train starting in 10 minutes at {start} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role [{world}] Hunt train starting in 10 minutes at {start} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to CH and CC servers: ```@Stormblood_role [{world}] Hunt train starting in 10 minutes at {start} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role [{world}] Hunt train starting in 10 minutes at {start} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
 
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -470,6 +474,25 @@ async def advertise(ctx, world, start, legacy="0"):
                 webhook = DiscordWebhook(url=WEBHOOK_ANGEL,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
                 resp=webhook.execute()
 
+# wrkjn server
+            print ("wrkjn")
+            if l==0:
+                msg=f"[{world}] Hunt train starting in 10 minutes at {start} ({username})."
+                webhook = DiscordWebhook(url=WEBHOOK_WRKJN,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+                resp=webhook.execute()
+
+# faloop server
+            print ("faloop")
+            mentions={
+                "roles": [ROLE_SHB_FALOOP, ROLE_STB_FALOOP]
+            }
+            if l==0:
+                msg=f"<@&{ROLE_SHB_FALOOP}> [{world}] Hunt train starting in 10 minutes at {start} ({username})."
+            if l==1:
+                msg=f"<@&{ROLE_STB_FALOOP}> [{world}] Hunt train starting in 10 minutes at {start} ({username})."
+            webhook = DiscordWebhook(url=WEBHOOK_FALOOP,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
@@ -486,9 +509,9 @@ async def madvertise(ctx, message, legacy="0"):
     parm=parse_parameters(None,legacy)
     l=parm[1]
     if l==0:
-        msg=f"About to send this notification to CH and CC servers: ```@Shadowbringers_role {message} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role {message} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to CH and CC servers: ```@Stormblood_role {message} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role {message} ({username}).```React with ✅ to send or wait 15 seconds to cancel."
 
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -564,6 +587,26 @@ async def madvertise(ctx, message, legacy="0"):
                 msg=f"{message} ({username})."
                 webhook = DiscordWebhook(url=WEBHOOK_ANGEL,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
                 resp=webhook.execute()
+
+# wrkjn server
+            print ("wrkjn")
+            if l==0:
+                msg=f"{message} ({username})."
+                webhook = DiscordWebhook(url=WEBHOOK_WRKJN,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+                resp=webhook.execute()
+
+
+# cc discord
+            print ("faloop")
+            mentions={
+                "roles": [ROLE_SHB_FALOOP, ROLE_STB_FALOOP]
+            }
+            if l==0:
+                msg=f"<@&{ROLE_SHB_FALOOP}> {message} ({username})."
+            if l==1:
+                msg=f"<@&{ROLE_STB_FALOOP}> {message} ({username})."
+            webhook = DiscordWebhook(url=WEBHOOK_FALOOP,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
 
 
 
