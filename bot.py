@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from discord.ext import commands
 from discord.ext import tasks
 
+from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -194,7 +195,11 @@ def fetch_sheet(range):
     creds = service_account.Credentials.from_service_account_file(secret,scopes=SCOPES)
     service = build('sheets', 'v4', credentials=creds)
     sheet=service.spreadsheets()
-    result=sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=range, valueRenderOption="UNFORMATTED_VALUE").execute()
+    try:
+        result=sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=range, valueRenderOption="UNFORMATTED_VALUE").execute()
+    except HttpError as err:
+        print(f"HttpError! {err.resp.status}")
+        return 0
     return result.get('values', [])
 
 
