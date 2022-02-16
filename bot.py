@@ -26,7 +26,7 @@ from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
 from apiclient import discovery
 
-from discord_webhook import DiscordWebhook
+from discord_webhook import DiscordWebhook,DiscordEmbed
 
 import httplib2
 
@@ -229,8 +229,10 @@ async def update_from_sheets():
 
 async def update_from_sheets_to_chat(legacy=None):
     range = 'Up Times!B3:E8'
+    message="Endwalker status```"
     if legacy==1:
         range = 'Up Times!B18:E23'
+        message="Shadowbringers status```"
     
     values=fetch_sheet(range)
 
@@ -238,13 +240,17 @@ async def update_from_sheets_to_chat(legacy=None):
         print('No data found.')
     else:
         taulu=[]
-        taulu.append(["Server","Started","+6h","Status"])
+        taulu.append(["Server","Status\nchanged","+6h","Status\nduration","Status"])
         for row in values:
             if ready == 1:
-                t1=datetime.datetime.strftime(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]),"%H:%M")
-                t2=datetime.datetime.strftime(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[2]),"%H:%M")
-                taulu.append([row[0],t1,t2,row[3]])
-    message="```"
+                t1=datetime.datetime.strftime(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]),"%d.%m %H:%M")
+                t2=datetime.datetime.strftime(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[2]),"%d.%m %H:%M")
+                t3_td=datetime.datetime.utcnow()-(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]))
+                t3_h=int(divmod(t3_td.total_seconds(),3600)[0])
+                t3_m=int(divmod(divmod(t3_td.total_seconds(),3600)[1],60)[0])
+                t3=f"{t3_h}:{t3_m:02d}"
+                
+                taulu.append([row[0],t1,t2,t3,row[3]])
     message+=tabulate(taulu,headers="firstrow",tablefmt="fancy_grid")+"```"
     return message
 
@@ -271,8 +277,17 @@ def parse_parameters(time,leg):
         l=1
     return [time,l]
 
-
-########################
+def webhook_shout(webhook,role,embed):
+    mentions={
+            "roles": [role]
+            }
+    if role==0:
+        msg="Hunt train is about to start!"
+    else:
+        msg=f"<@&{role}> train is about to start!"
+    webhook = DiscordWebhook(url=webhook,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+    webhook.add_embed(embed)
+    resp=webhook.execute()
 
 logging.basicConfig(level=logging.INFO)
 
@@ -390,23 +405,41 @@ async def getstatus(ctx, legacy="0"):
     await ctx.send(msg)
     await ctx.message.add_reaction("✅")
 
-@bot.command(name="testadvertise", aliases=['testshout','testsh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb")')
+@bot.command(name="testadvertise", aliases=['testshout','testsh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). Any attached image wil be included in the shout')
 async def advertise(ctx, world, start, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
 
-    username=ctx.message.author.display_name
-
     world=parse_world(world)
     parm=parse_parameters(None,legacy)
     l=parm[1]
     if l==0:
-        msg=f"About to send this notification to test server: ```@Endwalker_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
-    if l==1:
-        msg=f"About to send this notification to test server: ```@Legacy_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
+        role="@Endwalker_role"
+    else:
+        role="@Legacy_role"
 
-    msg1=await ctx.send(msg)
+
+    username=ctx.message.author.display_name
+    user_avatar=ctx.message.author.avatar_url
+
+    imageurl=""
+
+    if ctx.message.attachments:
+        imageurl=str(ctx.message.attachments[0].url)
+
+    embed=discord.Embed(
+            title="Hunt train will start in 10 minutes")
+    embed.set_author(name=str(username),icon_url=str(user_avatar))
+    embed.add_field(name="Server", value=world, inline=True)
+    embed.add_field(name="Start location", value=start)
+            
+    if imageurl!="":
+        embed.set_image(url=imageurl)
+
+    msg=f"About to send this notification to the test server (react with ✅ to send or wait 15 sec to cancel):\n\n{role} train is about to start!"
+
+    msg1=await ctx.send(msg,embed=embed)
     await msg1.add_reaction("✅")
 
     def check(reaction, user):
@@ -424,17 +457,94 @@ async def advertise(ctx, world, start, legacy="0"):
             reaction, user=res
             print (reaction.emoji)
 
+            embed=DiscordEmbed(
+                title="Hunt train will start in 10 minutes")
+            embed.set_author(name=str(username),icon_url=str(user_avatar))
+            embed.add_embed_field(name="Server", value=world, inline=True)
+            embed.add_embed_field(name="Start location", value=start)
+
+            if imageurl!="":
+                embed.set_image(url=imageurl)
+
 # test server
             print ("test")
-            mentions={
-                "roles": [ROLE_EW_TEST, ROLE_SHB_TEST]
-            }
             if l==0:
-                msg=f"<@&{ROLE_EW_TEST}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
-            if l==1:
-                msg=f"<@&{ROLE_SHB_TEST}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
-            webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
-            resp=webhook.execute()
+                role=ROLE_EW_TEST
+            else:
+                role=ROLE_SHB_TEST
+
+            webhook_shout(WEBHOOK_TEST,role,embed)
+
+            await msg1.delete()
+            await ctx.message.add_reaction('✅')
+
+@bot.command(name="testadvertise2", aliases=['testshout2','testsh2'],help='Advertise your train. Put multi-part parameters in quotes (eg. .testsh2 "message text here" [image_url] [legacy])')
+async def advertise(ctx, message, imageurl="", legacy="0"):
+    if ctx.channel.id != BOT_CHANNEL:
+        print (f"{BOT_CHANNEL} != {ctx.channel.id}")
+        return
+
+    username=ctx.message.author.display_name
+    user_avatar=ctx.message.author.avatar_url
+
+    if imageurl=="l":
+        legacy="l"
+        imageurl=""
+
+    if ctx.message.attachments:
+        imageurl=str(ctx.message.attachments[0].url)
+
+    parm=parse_parameters(None,legacy)
+    l=parm[1]
+    if l==0:
+        roletext="@Endwalker_role"
+    else:
+        roletext="@Legacy_role"
+
+    msg="About to send this notification to test server:"
+    embed=discord.Embed(
+            title=f"{roletext} train is about to start!",
+            description=message)
+    embed.set_author(name=username,icon_url=user_avatar)
+    if imageurl!="":
+        embed.set_image(url=imageurl)
+    try:
+        msg1=await ctx.send(msg,embed=embed)
+    except:
+        await ctx.message.add_reaction('❌')
+        await ctx.send("Invalid url or image")
+        return
+
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
+
+    try:
+        res=await bot.wait_for("reaction_add", check=check,timeout=15)
+    except asyncio.TimeoutError:
+        print ("Timed out")
+        await msg1.delete()
+        await ctx.message.add_reaction('❌')
+        pass
+    else:
+        if res:
+            reaction, user=res
+            print (reaction.emoji)
+
+            embed=DiscordEmbed(description=str(message))
+            embed.set_author(name=str(username),icon_url=str(user_avatar))
+            if imageurl!="":
+                embed.set_image(url=str(imageurl))
+
+# test server
+            print ("test")
+        
+            if l==0:
+                role=ROLE_EW_TEST
+            else:
+                role=ROLE_SHB_TEST
+            webhook_shout(WEBHOOK_TEST,role,embed)
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
