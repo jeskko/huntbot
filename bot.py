@@ -229,10 +229,10 @@ async def update_from_sheets():
 
 async def update_from_sheets_to_chat(legacy=None):
     range = 'Up Times!B3:E8'
-    message="Endwalker status```"
+    message="Endwalker status\n```"
     if legacy==1:
         range = 'Up Times!B18:E23'
-        message="Shadowbringers status```"
+        message="Shadowbringers status\n```"
     
     values=fetch_sheet(range)
 
@@ -244,7 +244,10 @@ async def update_from_sheets_to_chat(legacy=None):
         for row in values:
             if ready == 1:
                 t1=datetime.datetime.strftime(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]),"%d.%m %H:%M")
-                t2=datetime.datetime.strftime(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[2]),"%d.%m %H:%M")
+                if row[3]=="Dead":
+                    t2=datetime.datetime.strftime(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[2]),"%H:%M")
+                else:
+                    t2=""
                 t3_td=datetime.datetime.utcnow()-(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]))
                 t3_h=int(divmod(t3_td.total_seconds(),3600)[0])
                 t3_m=int(divmod(divmod(t3_td.total_seconds(),3600)[1],60)[0])
@@ -303,6 +306,7 @@ WEBHOOK_CH=os.getenv('WEBHOOK_CH')
 WEBHOOK_ANGEL=os.getenv('WEBHOOK_ANGEL')
 WEBHOOK_FALOOP=os.getenv('WEBHOOK_FALOOP')
 WEBHOOK_WRKJN=os.getenv('WEBHOOK_WRKJN')
+WEBHOOK_KETTU=os.getenv('WEBHOOK_KETTU')
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
 ROLE_EW_ESC=int(os.getenv('ROLE_ESC_FC'))
@@ -313,6 +317,8 @@ ROLE_EW_CH=int(os.getenv('ROLE_CH_EW'))
 ROLE_SHB_CH=int(os.getenv('ROLE_CH_SHB'))
 ROLE_EW_FALOOP=int(os.getenv('ROLE_FALOOP_EW'))
 ROLE_SHB_FALOOP=int(os.getenv('ROLE_FALOOP_SHB'))
+ROLE_EW_KETTU=int(os.gentenv('ROLE_KETTU_EW'))
+ROLE_SHB_KETTU=int(os.getenv('ROLE_KETTU_SHB'))
 
 ready = 0
 
@@ -595,6 +601,19 @@ async def advertise(ctx, world, start, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
+# kettu server
+            print ("kettu")
+            mentions={
+                "roles": [ROLE_EW_KETTU, ROLE_SHB_KETTU]
+            }
+            if l==0:
+                msg=f"<@&{ROLE_EW_KETTU}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            if l==1:
+                msg=f"<@&{ROLE_SHB_KETTU}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_KETTU,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+
 # ch server
             print ("ch")
             mentions={
@@ -709,6 +728,18 @@ async def madvertise(ctx, message, legacy="0"):
             if l==1:
                 msg=f"<@&{ROLE_SHB_TEST}> {message} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# kettu discord
+            print ("test")
+            mentions={
+                "roles": [ROLE_EW_KETTU, ROLE_SHB_KETTU]
+            }
+            if l==0:
+                msg=f"<@&{ROLE_EW_KETTU}> {message} (Conductor: {username})."
+            if l==1:
+                msg=f"<@&{ROLE_SHB_KETTU}> {message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_KETTU,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
 # ch discord
