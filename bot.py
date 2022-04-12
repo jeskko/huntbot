@@ -257,6 +257,79 @@ async def update_from_sheets_to_chat(legacy=None):
     message+=tabulate(taulu,headers="firstrow",tablefmt="fancy_grid")+"```"
     return message
 
+def delta_to_words(delta):
+    delta=abs(delta)
+    delta_d=int(divmod(delta.total_seconds(),86400)[0])
+    delta_h=int(divmod(divmod(delta.total_seconds(),86400)[1],3600)[0])
+    delta_m=int(divmod(divmod(delta.total_seconds(),3600)[1],60)[0])
+    
+    msg=""
+    if delta_d>0:
+        msg=f"{delta_d} days, "
+    if delta_h>0:
+        msg+=f"{delta_h} hours and "
+    msg+=f"{delta_m} minutes"
+    return msg
+
+def spec_delta(time,start_s,end_s,type):
+    now=datetime.datetime.utcnow()
+    start=time+datetime.timedelta(seconds=start_s)-now
+    end=time+datetime.timedelta(seconds=end_s)-now
+    st=delta_to_words(start)
+    en=delta_to_words(end)
+    if type=="spawn":
+        if int(start.total_seconds())>0:
+            msg=f"Marks have been despawned and will start spawning in {st} and will be fully spawned in {en}."
+        else:
+            msg=f"Marks have started spawning {st} ago and should be fully spawned in {en}."
+    else:
+        if int(start.total_seconds())>0:
+            msg=f"Marks are up and will start despawning in {st} and will be fully despawned in {en}."
+        else:
+            msg=f"Marks have started to despawn {st} ago and will be fully despawned in {en}."
+    return msg
+
+
+def speculate(world,legacy=None):
+    now=datetime.datetime.utcnow()
+    l=0
+    if legacy[0].capitalize()=="L":
+        l=1
+    w=parse_world(world)
+
+    timecell="Up Times!"+worldTimeLoc(w,l)
+    statuscell="Up Times!"+worldStatusLoc(w,l)
+
+    time=datetime.datetime(1899,12,30)+datetime.timedelta(days=fetch_sheet(timecell)[0][0])
+    delta=now-time
+    status=fetch_sheet(statuscell)[0][0]
+
+    msg=f"Status **{status}** for **{w}** was set at {time}.\n"
+    if status=="Dead":
+        msg+=spec_delta(time,12600,21600,"spawn")
+    if status=="Up":
+        dur=now-time+datetime.timedelta(hours=0)
+        if int(dur.total_seconds())<86400:
+            msg+=spec_delta(time,77400,86400,"despawn")
+        else:
+            if int(dur.total_seconds())<108000:
+                msg+=spec_delta(time,91800,108000,"spawn")
+            else:
+                if int(dur.total_seconds())<194400:
+                    msg+=spec_delta(time,178200,194400,"despawn")
+                else:
+                    if int(dur.total_seconds())<216000:
+                        msg+=spec_delta(time,192600,216000,"spawn")
+                    else:
+                        if int(dur.total_seconds())<302400:
+                            msg+=spec_delta(time,279000,302400,"despawn")
+                        else:
+                            if int(dur.total_seconds())<324000:
+                                msg+=spec_delta(time,293400,324000,"spawn")
+                            else:
+                                msg+="Condition uncertain, try to run trains more often."
+    return msg
+ 
 def parse_parameters(time,leg):
     try:
         if time==None:
@@ -307,6 +380,7 @@ WEBHOOK_ANGEL=os.getenv('WEBHOOK_ANGEL')
 WEBHOOK_FALOOP=os.getenv('WEBHOOK_FALOOP')
 WEBHOOK_WRKJN=os.getenv('WEBHOOK_WRKJN')
 WEBHOOK_KETTU=os.getenv('WEBHOOK_KETTU')
+WEBHOOK_HAO=os.getenv('WEBHOOK_HAO')
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
 ROLE_EW_ESC=int(os.getenv('ROLE_ESC_FC'))
@@ -317,12 +391,22 @@ ROLE_EW_CH=int(os.getenv('ROLE_CH_EW'))
 ROLE_SHB_CH=int(os.getenv('ROLE_CH_SHB'))
 ROLE_EW_FALOOP=int(os.getenv('ROLE_FALOOP_EW'))
 ROLE_SHB_FALOOP=int(os.getenv('ROLE_FALOOP_SHB'))
-ROLE_EW_KETTU=int(os.gentenv('ROLE_KETTU_EW'))
+ROLE_EW_KETTU=int(os.getenv('ROLE_KETTU_EW'))
 ROLE_SHB_KETTU=int(os.getenv('ROLE_KETTU_SHB'))
+ROLE_HAO=int(os.getenv('ROLE_HAO'))
 
 ready = 0
 
 bot = commands.Bot(command_prefix=".")
+
+@bot.command(name='speculate',help='Speculate about status of a certain world')
+async def spec(ctx,world,legacy="0"):
+    if ctx.channel.id != BOT_CHANNEL:
+        print (f"{BOT_CHANNEL} != {ctx.channel.id}")
+        return
+
+    msg=speculate(world,legacy)
+    await ctx.send(msg)
 
 @bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.\nTime parameter is optional and can be in form "+15" (minutes) or "15:24" (server time)')
 async def scouting(ctx, world, time=None, legacy="0"):
@@ -664,6 +748,16 @@ async def advertise(ctx, world, start, legacy="0"):
                 webhook = DiscordWebhook(url=WEBHOOK_WRKJN,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
                 resp=webhook.execute()
 
+# hao server
+            print ("hao")
+            mentions={
+                    "roles": [ROLE_HAO]
+            }
+            msg=f"<@&{ROLE_HAO}> [{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_HAO,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+
 # faloop server
             print ("faloop")
             mentions={
@@ -792,6 +886,15 @@ async def madvertise(ctx, message, legacy="0"):
                 msg=f"{message} (Conductor: {username})."
                 webhook = DiscordWebhook(url=WEBHOOK_WRKJN,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
                 resp=webhook.execute()
+
+# hao server
+            print ("hao")
+            mentions={
+                    "roles": [ROLE_HAO]
+            }
+            msg=f"<@&{ROLE_HAO}> {message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_HAO,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
 
 
 # cc discord
