@@ -293,8 +293,10 @@ def spec_delta(time,start_s,end_s,type):
 def speculate(world,legacy=None):
     now=datetime.datetime.utcnow()
     l=0
+    l_text=""
     if legacy[0].capitalize()=="L":
         l=1
+        l_text=" (legacy) "
     w=parse_world(world)
 
     timecell="Up Times!"+worldTimeLoc(w,l)
@@ -303,8 +305,8 @@ def speculate(world,legacy=None):
     time=datetime.datetime(1899,12,30)+datetime.timedelta(days=fetch_sheet(timecell)[0][0])
     delta=now-time
     status=fetch_sheet(statuscell)[0][0]
-
-    msg=f"Status **{status}** for **{w}** was set at {time}.\n"
+ 
+    msg=f"Status **{status}** for **{w}**{l_text} was set at {time}.\n"
     if status=="Dead":
         msg+=spec_delta(time,12600,21600,"spawn")
     if status=="Up":
