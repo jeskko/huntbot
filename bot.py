@@ -402,6 +402,7 @@ ROLE_SHB_FALOOP=int(os.getenv('ROLE_FALOOP_SHB'))
 ROLE_STB_FALOOP=int(os.getenv('ROLE_FALOOP_STB'))
 ROLE_EW_KETTU=int(os.getenv('ROLE_KETTU_EW'))
 ROLE_SHB_KETTU=int(os.getenv('ROLE_KETTU_SHB'))
+ROLE_STB_KETTU=int(os.getenv('ROLE_KETTU_STB'))
 ROLE_HAO=int(os.getenv('ROLE_HAO'))
 
 ready = 0
@@ -665,7 +666,7 @@ async def advertise(ctx, world, start, legacy="0"):
     if l==1:
         msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 15 seconds to cancel."
     if stb==1:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
  
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -700,12 +701,15 @@ async def advertise(ctx, world, start, legacy="0"):
 # kettu server
             print ("kettu")
             mentions={
-                "roles": [ROLE_EW_KETTU, ROLE_SHB_KETTU]
+                "roles": [ROLE_EW_KETTU, ROLE_SHB_KETTU, ROLE_STB_KETTU]
             }
             if l==0:
                 msg=f"<@&{ROLE_EW_KETTU}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
             if l==1:
                 msg=f"<@&{ROLE_SHB_KETTU}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_KETTU}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+
             webhook = DiscordWebhook(url=WEBHOOK_KETTU,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
@@ -788,8 +792,8 @@ async def advertise(ctx, world, start, legacy="0"):
             resp=webhook.execute()
 
             time=parm[0]
-            
-            await update_sheet(world,"Running",time,l)
+            if stb==0: 
+                await update_sheet(world,"Running",time,l)
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
@@ -845,14 +849,16 @@ async def madvertise(ctx, message, legacy="0"):
             resp=webhook.execute()
 
 # kettu discord
-            print ("test")
+            print ("kettu")
             mentions={
-                "roles": [ROLE_EW_KETTU, ROLE_SHB_KETTU]
+                "roles": [ROLE_EW_KETTU, ROLE_SHB_KETTU, ROLE_STB_KETTU]
             }
             if l==0:
                 msg=f"<@&{ROLE_EW_KETTU}> {message} (Conductor: {username})."
             if l==1:
                 msg=f"<@&{ROLE_SHB_KETTU}> {message} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_KETTU}> {message} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_KETTU,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
