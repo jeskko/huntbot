@@ -351,9 +351,14 @@ def parse_parameters(time,leg):
     except ValueError:
         time=datetime.datetime.utcnow()
     l=0
+    stb=0
     if leg[0].capitalize()=="L":
         l=1
-    return [time,l]
+    if leg[0]=="5":
+        l=1
+    if leg[0]=="4":
+        stb=1
+    return [time,l,stb]
 
 def webhook_shout(webhook,role,embed):
     mentions={
@@ -391,8 +396,10 @@ ROLE_EW_CC=int(os.getenv('ROLE_CC_EW'))
 ROLE_SHB_CC=int(os.getenv('ROLE_CC_SHB'))
 ROLE_EW_CH=int(os.getenv('ROLE_CH_EW'))
 ROLE_SHB_CH=int(os.getenv('ROLE_CH_SHB'))
+ROLE_STB_CH=int(os.getenv('ROLE_CH_STB'))
 ROLE_EW_FALOOP=int(os.getenv('ROLE_FALOOP_EW'))
 ROLE_SHB_FALOOP=int(os.getenv('ROLE_FALOOP_SHB'))
+ROLE_STB_FALOOP=int(os.getenv('ROLE_FALOOP_STB'))
 ROLE_EW_KETTU=int(os.getenv('ROLE_KETTU_EW'))
 ROLE_SHB_KETTU=int(os.getenv('ROLE_KETTU_SHB'))
 ROLE_HAO=int(os.getenv('ROLE_HAO'))
@@ -652,11 +659,14 @@ async def advertise(ctx, world, start, legacy="0"):
     world=parse_world(world)
     parm=parse_parameters(None,legacy)
     l=parm[1]
+    stb=parm[2]
     if l==0:
         msg=f"About to send this notification to Faloop, CH and CC servers: ```@Endwalker_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 15 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Legacy_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 15 seconds to cancel."
-
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 15 seconds to cancel."
+    if stb==1:
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 15 seconds to cancel."
+ 
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
 
@@ -703,12 +713,14 @@ async def advertise(ctx, world, start, legacy="0"):
 # ch server
             print ("ch")
             mentions={
-                "roles": [ROLE_EW_CH, ROLE_SHB_CH]
+                "roles": [ROLE_EW_CH, ROLE_SHB_CH, ROLE_STB_CH]
             }
             if l==0:
                 msg=f"<@&{ROLE_EW_CH}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
             if l==1:
                 msg=f"<@&{ROLE_SHB_CH}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_CH}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_CH,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
@@ -763,12 +775,15 @@ async def advertise(ctx, world, start, legacy="0"):
 # faloop server
             print ("faloop")
             mentions={
-                "roles": [ROLE_EW_FALOOP, ROLE_SHB_FALOOP]
+                "roles": [ROLE_EW_FALOOP, ROLE_SHB_FALOOP, ROLE_STB_FALOOP]
             }
             if l==0:
                 msg=f"<@&{ROLE_EW_FALOOP}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
             if l==1:
                 msg=f"<@&{ROLE_SHB_FALOOP}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_FALOOP}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+
             webhook = DiscordWebhook(url=WEBHOOK_FALOOP,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
@@ -790,10 +805,13 @@ async def madvertise(ctx, message, legacy="0"):
 
     parm=parse_parameters(None,legacy)
     l=parm[1]
+    stb=parm[2]
     if l==0:
         msg=f"About to send this notification to Faloop, CH and CC servers: ```@Endwalker_role {message} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Legacy_role {message} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role {message} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
+    if stb==1:
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role {message} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
 
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -841,12 +859,14 @@ async def madvertise(ctx, message, legacy="0"):
 # ch discord
             print ("ch")
             mentions={
-                "roles": [ROLE_EW_CH, ROLE_SHB_CH]
+                "roles": [ROLE_EW_CH, ROLE_SHB_CH, ROLE_STB_CH]
             }
             if l==0:
                 msg=f"<@&{ROLE_EW_CH}> {message} (Conductor: {username})."
             if l==1:
                 msg=f"<@&{ROLE_SHB_CH}> {message} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_CH}> {message} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_CH,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
@@ -899,15 +919,17 @@ async def madvertise(ctx, message, legacy="0"):
             resp=webhook.execute()
 
 
-# cc discord
+# faloop discord
             print ("faloop")
             mentions={
-                "roles": [ROLE_EW_FALOOP, ROLE_SHB_FALOOP]
+                "roles": [ROLE_EW_FALOOP, ROLE_SHB_FALOOP, ROLE_STB_FALOOP]
             }
             if l==0:
                 msg=f"<@&{ROLE_EW_FALOOP}> {message} (Conductor: {username})."
             if l==1:
                 msg=f"<@&{ROLE_SHB_FALOOP}> {message} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_FALOOP}> {message} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_FALOOP,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
