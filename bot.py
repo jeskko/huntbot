@@ -37,7 +37,9 @@ def parse_world(world):
             "P": "Phoenix",
             "S": "Shiva",
             "T": "Twintania",
-            "Z": "Zodiark"
+            "Z": "Zodiark",
+            "A": "Alpha",
+            "R": "Raiden"
             }
 
     initial=world[0].capitalize()
@@ -50,16 +52,20 @@ def worldTimeLoc(world,leg=None):
             "Phoenix": "C5",
             "Shiva": "C6",
             "Twintania": "C7",
-            "Zodiark": "C8"
+            "Zodiark": "C8",
+            "Alpha": "C9",
+            "Raiden": "C10"
             }
     if leg==1:
         locs = {
-                "Lich": "C18",
-                "Odin": "C19",
-                "Phoenix": "C20",
-                "Shiva": "C21",
-                "Twintania": "C22",
-                "Zodiark": "C23"
+                "Lich": "C20",
+                "Odin": "C21",
+                "Phoenix": "C22",
+                "Shiva": "C23",
+                "Twintania": "C24",
+                "Zodiark": "C25",
+                "Alpha": "C26",
+                "Raiden": "C27"
                 }
     return locs[world]
 
@@ -70,16 +76,20 @@ def worldStatusLoc(world,leg=None):
             "Phoenix": "E5",
             "Shiva": "E6",
             "Twintania": "E7",
-            "Zodiark": "E8"
+            "Zodiark": "E8",
+            "Alpha": "E9",
+            "Raiden": "E10"
             }
     if leg==1:
         locs = {
-                "Lich": "E18",
-                "Odin": "E19",
-                "Phoenix": "E20",
-                "Shiva": "E21",
-                "Twintania": "E22",
-                "Zodiark": "E23"
+                "Lich": "E20",
+                "Odin": "E21",
+                "Phoenix": "E22",
+                "Shiva": "E23",
+                "Twintania": "E24",
+                "Zodiark": "E25",
+                "Alpha": "E26",
+                "Raiden": "E27"
                 }
     return locs[world]
 
@@ -94,7 +104,9 @@ async def update_channel(server, status, started, legacy=None):
             "Phoenix": 888868382877831188,
             "Shiva": 888868394772860988,
             "Twintania": 888868418361630811,
-            "Zodiark": 888868429950484491
+            "Zodiark": 888868429950484491,
+            "Alpha": 993531334754578534,
+            "Raiden": 993531381462351923
             }
 
     ids_l = {
@@ -103,7 +115,9 @@ async def update_channel(server, status, started, legacy=None):
             "Phoenix": 895686443064766545,
             "Shiva": 895686465483309116,
             "Twintania": 895686484659679343,
-            "Zodiark": 895686518335737936
+            "Zodiark": 895686518335737936,
+            "Alpha": 993531610962071744,
+            "Raiden": 993531650413690920
             }
     
     servers = {
@@ -112,7 +126,9 @@ async def update_channel(server, status, started, legacy=None):
             "Phoenix": "phoe",
             "Shiva": "shiva",
             "Twintania": "twin",
-            "Zodiark": "zodi"
+            "Zodiark": "zodi",
+            "Alpha": "alpha",
+            "Raiden": "raid"
             }
 
     statuses = {
@@ -204,8 +220,8 @@ def fetch_sheet(range):
 
 
 async def update_from_sheets():
-    EW_RANGE = 'Up Times!B3:E8'
-    LEGACY_RANGE = 'Up Times!B18:E23'
+    EW_RANGE = 'Up Times!B3:E10'
+    LEGACY_RANGE = 'Up Times!B20:E27'
 
     values=fetch_sheet(EW_RANGE)
 
@@ -228,10 +244,10 @@ async def update_from_sheets():
 
 
 async def update_from_sheets_to_chat(legacy=None):
-    range = 'Up Times!B3:E8'
+    range = 'Up Times!B3:E10'
     message="Endwalker status\n```"
     if legacy==1:
-        range = 'Up Times!B18:E23'
+        range = 'Up Times!B20:E27'
         message="Shadowbringers status\n```"
     
     values=fetch_sheet(range)
@@ -358,6 +374,7 @@ def parse_parameters(time,leg):
         l=1
     if leg[0]=="4":
         stb=1
+        l=1
     return [time,l,stb]
 
 def webhook_shout(webhook,role,embed):
@@ -388,6 +405,7 @@ WEBHOOK_FALOOP=os.getenv('WEBHOOK_FALOOP')
 WEBHOOK_WRKJN=os.getenv('WEBHOOK_WRKJN')
 WEBHOOK_KETTU=os.getenv('WEBHOOK_KETTU')
 WEBHOOK_HAO=os.getenv('WEBHOOK_HAO')
+WEBHOOK_ASHIE=os.getenv('WEBHOOK_ASHIE')
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
 ROLE_EW_ESC=int(os.getenv('ROLE_ESC_FC'))
@@ -404,6 +422,7 @@ ROLE_EW_KETTU=int(os.getenv('ROLE_KETTU_EW'))
 ROLE_SHB_KETTU=int(os.getenv('ROLE_KETTU_SHB'))
 ROLE_STB_KETTU=int(os.getenv('ROLE_KETTU_STB'))
 ROLE_HAO=int(os.getenv('ROLE_HAO'))
+ROLE_ASHIE=int(os.getenv('ROLE_ASHIE'))
 
 ready = 0
 
@@ -775,6 +794,15 @@ async def advertise(ctx, world, start, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_HAO,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
+# ashie server
+            print ("ashie")
+            mentions={
+                    "roles": [ROLE_ASHIE]
+            }
+            msg=f"<@&{ROLE_ASHIE}> [{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_ASHIE,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
 
 # faloop server
             print ("faloop")
@@ -923,6 +951,16 @@ async def madvertise(ctx, message, legacy="0"):
             msg=f"<@&{ROLE_HAO}> {message} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_HAO,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
+
+# ashie server
+            print ("ashie")
+            mentions={
+                    "roles": [ROLE_ASHIE]
+            }
+            msg=f"<@&{ROLE_ASHIE}> {message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_ASHIE,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
 
 
 # faloop discord
