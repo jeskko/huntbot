@@ -533,9 +533,9 @@ async def getstatus(ctx, legacy="0"):
 
 async def periodicstatus():
     msg=await update_from_sheets_to_chat(0)
-    await bot.get_channel(LOG_CHANNEL).send(msg)
+    await bot_log(msg)
     msg=await update_from_sheets_to_chat(1)
-    await bot.get_channel(LOG_CHANNEL).send(msg)
+    await bot_log(msg)
 
 
 @bot.command(name="testadvertise", aliases=['testshout','testsh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). Any attached image wil be included in the shout')
@@ -1057,10 +1057,14 @@ async def STLoop():
     if ready == 1:
         await bot.change_presence(activity=discord.Game(f"Server time: {now}"))
 
-@tasks.loop(seconds = 360)
+@tasks.loop(seconds = 1800)
 async def StatusLoop():
     if ready == 1:
-        await periodicstatus()
+        try: 
+            await periodicstatus()
+        except:
+            print ("statusloop error")
+
 
 @tasks.loop(seconds = 300)
 async def SheetLoop():
