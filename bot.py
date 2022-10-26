@@ -47,54 +47,55 @@ def parse_world(world):
 
 def worldTimeLoc(world,leg=None):
     locs = {
-            "Lich": "C3",
-            "Odin": "C4",
-            "Phoenix": "C5",
-            "Shiva": "C6",
-            "Twintania": "C7",
-            "Zodiark": "C8",
-            "Alpha": "C9",
-            "Raiden": "C10"
+            "Lich": "C4",
+            "Odin": "C5",
+            "Phoenix": "C6",
+            "Shiva": "C8",
+            "Twintania": "C9",
+            "Zodiark": "C10",
+            "Alpha": "C3",
+            "Raiden": "C7"
             }
     if leg==1:
         locs = {
-                "Lich": "C20",
-                "Odin": "C21",
-                "Phoenix": "C22",
-                "Shiva": "C23",
-                "Twintania": "C24",
-                "Zodiark": "C25",
-                "Alpha": "C26",
-                "Raiden": "C27"
+                "Lich": "C21",
+                "Odin": "C22",
+                "Phoenix": "C23",
+                "Shiva": "C25",
+                "Twintania": "C26",
+                "Zodiark": "C27",
+                "Alpha": "C20",
+                "Raiden": "C24"
                 }
     return locs[world]
 
 def worldStatusLoc(world,leg=None):
     locs = {
-            "Lich": "E3",
-            "Odin": "E4",
-            "Phoenix": "E5",
-            "Shiva": "E6",
-            "Twintania": "E7",
-            "Zodiark": "E8",
-            "Alpha": "E9",
-            "Raiden": "E10"
+            "Lich": "E4",
+            "Odin": "E5",
+            "Phoenix": "E6",
+            "Shiva": "E8",
+            "Twintania": "E9",
+            "Zodiark": "E10",
+            "Alpha": "E3",
+            "Raiden": "E7"
             }
     if leg==1:
         locs = {
-                "Lich": "E20",
-                "Odin": "E21",
-                "Phoenix": "E22",
-                "Shiva": "E23",
-                "Twintania": "E24",
-                "Zodiark": "E25",
-                "Alpha": "E26",
-                "Raiden": "E27"
+                "Lich": "E21",
+                "Odin": "E22",
+                "Phoenix": "E23",
+                "Shiva": "E25",
+                "Twintania": "E26",
+                "Zodiark": "E27",
+                "Alpha": "E20",
+                "Raiden": "E24"
                 }
     return locs[world]
 
 async def bot_log(msg):
     await bot.get_channel(LOG_CHANNEL).send(msg)
+
 
 async def update_channel(server, status, started, legacy=None):
 
@@ -406,6 +407,10 @@ WEBHOOK_WRKJN=os.getenv('WEBHOOK_WRKJN')
 WEBHOOK_KETTU=os.getenv('WEBHOOK_KETTU')
 WEBHOOK_HAO=os.getenv('WEBHOOK_HAO')
 WEBHOOK_ASHIE=os.getenv('WEBHOOK_ASHIE')
+WEBHOOK_VINCENT=os.getenv('WEBHOOK_VINCENT')
+WEBHOOK_SYNCHRONISED=os.getenv('WEBHOOK_SYNCHRONISED')
+WEBHOOK_LUCY=os.getenv('WEBHOOK_LUCY')
+WEBHOOK_KENZIE=os.getenv('WEBHOOK_KENZIE')
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
 ROLE_EW_ESC=int(os.getenv('ROLE_ESC_FC'))
@@ -433,7 +438,7 @@ async def spec(ctx,world,legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
-
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     msg=speculate(world,legacy)
     await ctx.send(msg)
 
@@ -442,7 +447,7 @@ async def scouting(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
-
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     world=parse_world(world)
     parm=parse_parameters(time,legacy)
     time=parm[0]
@@ -457,7 +462,7 @@ async def scoutend(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
-
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     world=parse_world(world)
     parm=parse_parameters(time,legacy)
     time=parm[0]
@@ -472,7 +477,7 @@ async def begintrain(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
-
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     world=parse_world(world)
     parm=parse_parameters(time,legacy)
     time=parm[0]
@@ -487,7 +492,7 @@ async def endtrain(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
-
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     world=parse_world(world)
     parm=parse_parameters(time,legacy)
     time=parm[0]
@@ -502,7 +507,7 @@ async def resettrain(ctx, world, time=None,legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
-
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     world=parse_world(world)
     parm=parse_parameters(time,legacy)
     time=parm[0]
@@ -517,12 +522,21 @@ async def getstatus(ctx, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
+    
     leg=0
     if legacy[0].capitalize() == "L":
         leg=1
     msg=await update_from_sheets_to_chat(leg)
     await ctx.send(msg)
     await ctx.message.add_reaction("✅")
+
+async def periodicstatus():
+    msg=await update_from_sheets_to_chat(0)
+    await bot.get_channel(LOG_CHANNEL).send(msg)
+    msg=await update_from_sheets_to_chat(1)
+    await bot.get_channel(LOG_CHANNEL).send(msg)
+
 
 @bot.command(name="testadvertise", aliases=['testshout','testsh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). Any attached image wil be included in the shout')
 async def advertise(ctx, world, start, legacy="0"):
@@ -640,7 +654,7 @@ async def advertise(ctx, message, imageurl="", legacy="0"):
         return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
 
     try:
-        res=await bot.wait_for("reaction_add", check=check,timeout=15)
+        res=await bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
         print ("Timed out")
         await msg1.delete()
@@ -673,7 +687,7 @@ async def advertise(ctx, world, start, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
-
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     username=ctx.message.author.display_name
 
     world=parse_world(world)
@@ -681,11 +695,11 @@ async def advertise(ctx, world, start, legacy="0"):
     l=parm[1]
     stb=parm[2]
     if l==0:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Endwalker_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Endwalker_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
     if stb==1:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
  
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -694,7 +708,7 @@ async def advertise(ctx, world, start, legacy="0"):
         return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
 
     try:
-        res=await bot.wait_for("reaction_add", check=check,timeout=15)
+        res=await bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
         print ("Timed out")
         await msg1.delete()
@@ -819,6 +833,30 @@ async def advertise(ctx, world, start, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_FALOOP,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
+# vincent server
+            print ("vincent")
+            msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_VINCENT,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# syncronised server
+            print ("syncronised")
+            msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_SYNCHRONISED,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# lucy server
+            print ("lucy")
+            msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_LUCY,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# kenzie server
+            print ("kenzie")
+            msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_KENZIE,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
             time=parm[0]
             if stb==0: 
                 await update_sheet(world,"Running",time,l)
@@ -832,18 +870,18 @@ async def madvertise(ctx, message, legacy="0"):
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
         return
     username=ctx.message.author.display_name
-
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     print (message)
 
     parm=parse_parameters(None,legacy)
     l=parm[1]
     stb=parm[2]
     if l==0:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Endwalker_role {message} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Endwalker_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role {message} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Shadowbringers_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
     if stb==1:
-        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role {message} (Conductor: {username}).```React with ✅ to send or wait 15 seconds to cancel."
+        msg=f"About to send this notification to Faloop, CH and CC servers: ```@Stormblood_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
 
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -852,7 +890,7 @@ async def madvertise(ctx, message, legacy="0"):
         return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
 
     try:
-        res=await bot.wait_for("reaction_add", check=check,timeout=15)
+        res=await bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
         print ("Timed out")
         await msg1.delete()
@@ -977,6 +1015,29 @@ async def madvertise(ctx, message, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_FALOOP,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
+# vincent server
+            print ("vincent")
+            msg=f"{message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_VINCENT,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# synchronised server
+            print ("synchronised")
+            msg=f"{message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_SYNCHRONISED,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# lucy server
+            print ("lucy")
+            msg=f"{message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_LUCY,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# kenzie server
+            print ("kenzie")
+            msg=f"{message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_KENZIE,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
 
 
             await msg1.delete()
@@ -996,11 +1057,17 @@ async def STLoop():
     if ready == 1:
         await bot.change_presence(activity=discord.Game(f"Server time: {now}"))
 
+@tasks.loop(seconds = 360)
+async def StatusLoop():
+    if ready == 1:
+        await periodicstatus()
+
 @tasks.loop(seconds = 300)
 async def SheetLoop():
     await update_from_sheets()
 
 SheetLoop.start()
 STLoop.start()
+StatusLoop.start()
 
 bot.run(TOKEN)
