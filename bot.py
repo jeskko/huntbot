@@ -326,7 +326,7 @@ def speculate(world,legacy=None):
     msg=f"Status **{status}** for **{w}**{l_text} was set at {time}.\n"
     if status=="Dead":
         msg+=spec_delta(time,12600,21600,"spawn")
-    if status=="Up":
+    if status=="Up" or status=="Scouting" or status=="Scouted":
         dur=now-time+datetime.timedelta(hours=0)
         if int(dur.total_seconds())<86400:
             msg+=spec_delta(time,77400,86400,"despawn")
@@ -442,7 +442,7 @@ async def spec(ctx,world,legacy="0"):
     msg=speculate(world,legacy)
     await ctx.send(msg)
 
-@bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.\nTime parameter is optional and can be in form "+15" (minutes) or "15:24" (server time)')
+@bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.')
 async def scouting(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
@@ -450,14 +450,27 @@ async def scouting(ctx, world, time=None, legacy="0"):
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     world=parse_world(world)
     parm=parse_parameters(time,legacy)
-    time=parm[0]
+    time=0
     l=parm[1]
     await update_sheet(world,"Scouting",time,l)
     await update_channel(world,"Scouting",time,l)
     await ctx.message.add_reaction("✅")
 
+@bot.command(name='scoutcancel', aliases=['cancel', 'sccancel', 'scc'], help="Cancel scouting. Return server to up status.")
+async def scoutcancel(ctx, world, time=None, legacy="0"):
+    if ctx.channel.id != BOT_CHANNEL:
+        print (f"{BOT_CHANNEL} != {ctx.channel.id}")
+        return
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
+    world=parse_world(world)
+    parm=parse_parameters(time,legacy)
+    time=0
+    l=parm[1]
+    await update_sheet(world,"Up",time,l)
+    await update_channel(world,"Up",time,l)
+    await ctx.message.add_reaction("✅")
 
-@bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
+@bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.')
 async def scoutend(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
         print (f"{BOT_CHANNEL} != {ctx.channel.id}")
@@ -465,7 +478,7 @@ async def scoutend(ctx, world, time=None, legacy="0"):
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     world=parse_world(world)
     parm=parse_parameters(time,legacy)
-    time=parm[0]
+    time=0
     l=parm[1]
 
     await update_sheet(world,"Scouted",time,l)
