@@ -354,17 +354,20 @@ def parse_parameters(time,leg):
         if time==None:
             time=datetime.datetime.utcnow()
         else:
-            if time[0].capitalize()=="L":
+            if time[0].capitalize()=="L" or time[0]=="5":
                 leg="L"
                 time=datetime.datetime.utcnow()
             else:
-                if time[0]=="+":
-                    time=datetime.timedelta(minutes=int(time[1:]))+datetime.datetime.utcnow()
+                if time[0]=="4":
+                    leg="4"
                 else:
-                    t=time.split(":")
-                    h=int(t[0])
-                    m=int(t[1])
-                    time=datetime.datetime.utcnow().replace(hour=h,minute=m,second=45)
+                    if time[0]=="+":
+                        time=datetime.timedelta(minutes=int(time[1:]))+datetime.datetime.utcnow()
+                    else:
+                        t=time.split(":")
+                        h=int(t[0])
+                        m=int(t[1])
+                        time=datetime.datetime.utcnow().replace(hour=h,minute=m,second=45)
     except ValueError:
         time=datetime.datetime.utcnow()
     l=0
@@ -452,9 +455,13 @@ async def scouting(ctx, world, time=None, legacy="0"):
     parm=parse_parameters(time,legacy)
     time=0
     l=parm[1]
-    await update_sheet(world,"Scouting",time,l)
-    await update_channel(world,"Scouting",time,l)
-    await ctx.message.add_reaction("✅")
+    stb=parm[2]
+    if stb==0:
+        await update_sheet(world,"Scouting",time,l)
+        await update_channel(world,"Scouting",time,l)
+        await ctx.message.add_reaction("✅")
+    else:
+        await ctx.message.add_reaction("❓")
 
 @bot.command(name='scoutcancel', aliases=['cancel', 'sccancel', 'scc'], help="Cancel scouting. Return server to up status.")
 async def scoutcancel(ctx, world, time=None, legacy="0"):
@@ -466,9 +473,13 @@ async def scoutcancel(ctx, world, time=None, legacy="0"):
     parm=parse_parameters(time,legacy)
     time=0
     l=parm[1]
-    await update_sheet(world,"Up",time,l)
-    await update_channel(world,"Up",time,l)
-    await ctx.message.add_reaction("✅")
+    stb=parm[2]
+    if stb==0:
+        await update_sheet(world,"Up",time,l)
+        await update_channel(world,"Up",time,l)
+        await ctx.message.add_reaction("✅")
+    else:
+        await ctx.message.add_reaction("❓")
 
 @bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.')
 async def scoutend(ctx, world, time=None, legacy="0"):
@@ -480,9 +491,12 @@ async def scoutend(ctx, world, time=None, legacy="0"):
     parm=parse_parameters(time,legacy)
     time=0
     l=parm[1]
-
-    await update_sheet(world,"Scouted",time,l)
-    await ctx.message.add_reaction("✅")
+    stb=parm[2]
+    if stb==0:
+        await update_sheet(world,"Scouted",time,l)
+        await ctx.message.add_reaction("✅")
+    else:
+        await ctx.message.add_reaction("❓")
 
 
 @bot.command(name='start', aliases=['begin','run','go'],help='Start train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
@@ -495,9 +509,13 @@ async def begintrain(ctx, world, time=None, legacy="0"):
     parm=parse_parameters(time,legacy)
     time=parm[0]
     l=parm[1]
+    stb=parm[2]
 
-    await update_sheet(world,"Running",time,l)
-    await ctx.message.add_reaction("✅")
+    if stb==0:
+        await update_sheet(world,"Running",time,l)
+        await ctx.message.add_reaction("✅")
+    else:
+        await ctx.message.add_reaction("❓")
 
 
 @bot.command(name='end', aliases=['done','dead','finish'],help='Finish train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
@@ -510,9 +528,12 @@ async def endtrain(ctx, world, time=None, legacy="0"):
     parm=parse_parameters(time,legacy)
     time=parm[0]
     l=parm[1]
-
-    await update_sheet(world,"Dead",time,l)
-    await ctx.message.add_reaction("✅")
+    stb=parm[2]
+    if stb==0:
+        await update_sheet(world,"Dead",time,l)
+        await ctx.message.add_reaction("✅")
+    else:
+        await ctx.message.add_reaction("❓")
 
 
 @bot.command(name='up', aliases=['reset'],help='Reset train')
@@ -525,9 +546,13 @@ async def resettrain(ctx, world, time=None,legacy="0"):
     parm=parse_parameters(time,legacy)
     time=parm[0]
     l=parm[1]
+    stb=parm[2]
 
-    await update_sheet(world,"Up",time,l)
-    await ctx.message.add_reaction("✅")
+    if stb==0:
+        await update_sheet(world,"Up",time,l)
+        await ctx.message.add_reaction("✅")
+    else:
+        await ctx.message.add_reaction("❓")
 
 
 @bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
