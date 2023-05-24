@@ -6,6 +6,7 @@ import asyncio
 
 import os
 import datetime
+from time import mktime
 import discord
 import logging
 
@@ -414,6 +415,8 @@ WEBHOOK_VINCENT=os.getenv('WEBHOOK_VINCENT')
 WEBHOOK_SYNCHRONISED=os.getenv('WEBHOOK_SYNCHRONISED')
 WEBHOOK_LUCY=os.getenv('WEBHOOK_LUCY')
 WEBHOOK_KENZIE=os.getenv('WEBHOOK_KENZIE')
+WEBHOOK_BADGER=os.getenv('WEBHOOK_BADGER')
+
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
 ROLE_EW_ESC=int(os.getenv('ROLE_ESC_FC'))
@@ -431,6 +434,9 @@ ROLE_SHB_KETTU=int(os.getenv('ROLE_KETTU_SHB'))
 ROLE_STB_KETTU=int(os.getenv('ROLE_KETTU_STB'))
 ROLE_HAO=int(os.getenv('ROLE_HAO'))
 ROLE_ASHIE=int(os.getenv('ROLE_ASHIE'))
+ROLE_EW_BADGER=int(os.getenv('ROLE_BADGER_EW'))
+ROLE_SHB_BADGER=int(os.getenv('ROLE_BADGER_SHB'))
+ROLE_STB_BADGER=int(os.getenv('ROLE_BADGER_STB'))
 
 ready = 0
 
@@ -733,16 +739,23 @@ async def advertise(ctx, world, start, legacy="0"):
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     username=ctx.message.author.display_name
 
+    if len(start)<6:
+        await ctx.message.add_reaction("❌")
+        await ctx.send("Start location needs to be over 5 characters.")
+        return
+
+    tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
+    timestamp=int(mktime(tenmin.timetuple()))
     world=parse_world(world)
     parm=parse_parameters(None,legacy)
     l=parm[1]
     stb=parm[2]
     if l==0:
-        msg=f"About to send this notification to various servers: ```@Endwalker_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Endwalker_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to various servers: ```@Shadowbringers_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Shadowbringers_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
     if stb==1:
-        msg=f"About to send this notification to various servers: ```@Stormblood_role **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Stormblood_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
  
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -768,9 +781,9 @@ async def advertise(ctx, world, start, legacy="0"):
                 "roles": [ROLE_EW_TEST, ROLE_SHB_TEST]
             }
             if l==0:
-                msg=f"<@&{ROLE_EW_TEST}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_EW_TEST}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             if l==1:
-                msg=f"<@&{ROLE_SHB_TEST}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_SHB_TEST}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_TEST,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
@@ -780,11 +793,11 @@ async def advertise(ctx, world, start, legacy="0"):
                 "roles": [ROLE_EW_KETTU, ROLE_SHB_KETTU, ROLE_STB_KETTU]
             }
             if l==0:
-                msg=f"<@&{ROLE_EW_KETTU}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_EW_KETTU}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             if l==1:
-                msg=f"<@&{ROLE_SHB_KETTU}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_SHB_KETTU}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             if stb==1:
-                msg=f"<@&{ROLE_STB_KETTU}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_STB_KETTU}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
 
             webhook = DiscordWebhook(url=WEBHOOK_KETTU,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
@@ -796,25 +809,25 @@ async def advertise(ctx, world, start, legacy="0"):
                 "roles": [ROLE_EW_CH, ROLE_SHB_CH, ROLE_STB_CH]
             }
             if l==0:
-                msg=f"<@&{ROLE_EW_CH}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_EW_CH}> **[{world}]** Hunt train starting in <t:{timestamp}:R> at {start} (Conductor: {username})."
             if l==1:
-                msg=f"<@&{ROLE_SHB_CH}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_SHB_CH}> **[{world}]** Hunt train starting in <t:{timestamp}:R>v at {start} (Conductor: {username})."
             if stb==1:
-                msg=f"<@&{ROLE_STB_CH}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_STB_CH}> **[{world}]** Hunt train starting in <t:{timestamp}:R> at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_CH,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
 # angel server
             print ("angel")
             if l==0:
-                msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
                 webhook = DiscordWebhook(url=WEBHOOK_ANGEL,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
                 resp=webhook.execute()
 
 # wrkjn server
             print ("wrkjn")
             if l==0:
-                msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
                 webhook = DiscordWebhook(url=WEBHOOK_WRKJN,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
                 resp=webhook.execute()
 
@@ -823,7 +836,7 @@ async def advertise(ctx, world, start, legacy="0"):
             mentions={
                     "roles": [ROLE_ASHIE]
             }
-            msg=f"<@&{ROLE_ASHIE}> [{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            msg=f"<@&{ROLE_ASHIE}> [{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_ASHIE,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
@@ -834,30 +847,30 @@ async def advertise(ctx, world, start, legacy="0"):
                 "roles": [ROLE_EW_FALOOP, ROLE_SHB_FALOOP, ROLE_STB_FALOOP]
             }
             if l==0:
-                msg=f"<@&{ROLE_EW_FALOOP}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_EW_FALOOP}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             if l==1:
-                msg=f"<@&{ROLE_SHB_FALOOP}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_SHB_FALOOP}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             if stb==1:
-                msg=f"<@&{ROLE_STB_FALOOP}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_STB_FALOOP}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
 
             webhook = DiscordWebhook(url=WEBHOOK_FALOOP,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
 # vincent server
             print ("vincent")
-            msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_VINCENT,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
 # syncronised server
             print ("syncronised")
-            msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_SYNCHRONISED,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
 # kenzie server
             print ("kenzie")
-            msg=f"[{world}] Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_KENZIE,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
@@ -867,6 +880,21 @@ async def advertise(ctx, world, start, legacy="0"):
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
+            
+# badger server
+            print ("badger")
+            mentions={
+                "roles": [ROLE_EW_BADGER, ROLE_SHB_BADGER, ROLE_STB_BADGER]
+            }
+            if l==0:
+                msg=f"<@&{ROLE_EW_BADGER}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            if l==1:
+                msg=f"<@&{ROLE_SHB_BADGER}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_BADGER}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+
+            webhook = DiscordWebhook(url=WEBHOOK_BADGER,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()            
 
 @bot.command(name="advmanual", aliases=['adm','mshout','msh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")')
 async def madvertise(ctx, message, legacy="0"):
@@ -876,6 +904,11 @@ async def madvertise(ctx, message, legacy="0"):
     username=ctx.message.author.display_name
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     print (message)
+
+    if len(message)<6:
+        await ctx.message.add_reaction("❌")
+        await ctx.send("Message needs to be over 5 characters.")
+        return
 
     parm=parse_parameters(None,legacy)
     l=parm[1]
@@ -1006,6 +1039,20 @@ async def madvertise(ctx, message, legacy="0"):
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
+
+# badger discord
+            print ("badger")
+            mentions={
+                "roles": [ROLE_EW_BADGER, ROLE_SHB_BADGER, ROLE_STB_BADGER]
+            }
+            if l==0:
+                msg=f"<@&{ROLE_EW_BADGER}> {message} (Conductor: {username})."
+            if l==1:
+                msg=f"<@&{ROLE_SHB_BADGER}> {message} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_BADGER}> {message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_BADGER,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
 
 
 
