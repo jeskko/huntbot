@@ -416,6 +416,7 @@ WEBHOOK_SYNCHRONISED=os.getenv('WEBHOOK_SYNCHRONISED')
 WEBHOOK_LUCY=os.getenv('WEBHOOK_LUCY')
 WEBHOOK_KENZIE=os.getenv('WEBHOOK_KENZIE')
 WEBHOOK_BADGER=os.getenv('WEBHOOK_BADGER')
+WEBHOOK_DELIAH=os.getenv('WEBHOOK_DELIAH')
 
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
@@ -811,7 +812,7 @@ async def advertise(ctx, world, start, legacy="0"):
             if l==0:
                 msg=f"<@&{ROLE_EW_CH}> **[{world}]** Hunt train starting in <t:{timestamp}:R> at {start} (Conductor: {username})."
             if l==1:
-                msg=f"<@&{ROLE_SHB_CH}> **[{world}]** Hunt train starting in <t:{timestamp}:R>v at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_SHB_CH}> **[{world}]** Hunt train starting in <t:{timestamp}:R> at {start} (Conductor: {username})."
             if stb==1:
                 msg=f"<@&{ROLE_STB_CH}> **[{world}]** Hunt train starting in <t:{timestamp}:R> at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_CH,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
@@ -874,27 +875,35 @@ async def advertise(ctx, world, start, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_KENZIE,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
-            time=parm[0]
-            if stb==0: 
-                await update_sheet(world,"Running",time,l)
-
-            await msg1.delete()
-            await ctx.message.add_reaction('✅')
-            
 # badger server
             print ("badger")
             mentions={
                 "roles": [ROLE_EW_BADGER, ROLE_SHB_BADGER, ROLE_STB_BADGER]
             }
             if l==0:
-                msg=f"<@&{ROLE_EW_BADGER}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_EW_BADGER}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             if l==1:
-                msg=f"<@&{ROLE_SHB_BADGER}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_SHB_BADGER}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             if stb==1:
-                msg=f"<@&{ROLE_STB_BADGER}> **[{world}]** Hunt train starting in 10 minutes at {start} (Conductor: {username})."
+                msg=f"<@&{ROLE_STB_BADGER}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
 
             webhook = DiscordWebhook(url=WEBHOOK_BADGER,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
-            resp=webhook.execute()            
+            resp=webhook.execute()    
+            
+            # deliah server
+            print ("deliah")
+            msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_DELIAH,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+            time=parm[0]
+            if stb==0: 
+                await update_sheet(world,"Running",time,l)
+
+            await msg1.delete()
+            await ctx.message.add_reaction('✅')
+
+
 
 @bot.command(name="advmanual", aliases=['adm','mshout','msh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")')
 async def madvertise(ctx, message, legacy="0"):
@@ -1002,8 +1011,6 @@ async def madvertise(ctx, message, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_ASHIE,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
-
-
 # faloop discord
             print ("faloop")
             mentions={
@@ -1036,10 +1043,6 @@ async def madvertise(ctx, message, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_KENZIE,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
-
-            await msg1.delete()
-            await ctx.message.add_reaction('✅')
-
 # badger discord
             print ("badger")
             mentions={
@@ -1053,6 +1056,16 @@ async def madvertise(ctx, message, legacy="0"):
                 msg=f"<@&{ROLE_STB_BADGER}> {message} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_BADGER,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
+
+# deliah server
+            print ("deliah")
+            msg=f"{message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_DELIAH,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+
+            await msg1.delete()
+            await ctx.message.add_reaction('✅')
 
 
 
