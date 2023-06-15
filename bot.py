@@ -464,6 +464,12 @@ async def scouting(ctx, world, time=None, legacy="0"):
     l=parm[1]
     stb=parm[2]
     if stb==0:
+        statuscell="Up Times!"+worldStatusLoc(world,l)
+        status=fetch_sheet(statuscell)[0][0]
+        if status=="Dead":
+            await ctx.send("Scouting a dead world, adjusting timer.")
+            timecell="Up Times!"+worldTimeLoc(world,l)
+            time=datetime.datetime(1899,12,30)+datetime.timedelta(days=fetch_sheet(timecell)[0][0])+datetime.timedelta(hours=6)    
         await update_sheet(world,"Scouting",time,l)
         await update_channel(world,"Scouting",time,l)
         await ctx.message.add_reaction("✅")
@@ -478,12 +484,20 @@ async def scoutcancel(ctx, world, time=None, legacy="0"):
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     world=parse_world(world)
     parm=parse_parameters(time,legacy)
-    time=0
     l=parm[1]
     stb=parm[2]
+    status="Up"
     if stb==0:
-        await update_sheet(world,"Up",time,l)
-        await update_channel(world,"Up",time,l)
+        timecell="Up Times!"+worldTimeLoc(world,l)
+        time=datetime.datetime(1899,12,30)+datetime.timedelta(days=fetch_sheet(timecell)[0][0])
+        if time>datetime.datetime.utcnow():
+            time=time-datetime.timedelta(hours=6)
+            status="Dead"
+            await ctx.send("Adjusting to time -6h and status to dead because timestamp in future.")
+        else:
+            time=0
+        await update_sheet(world,status,time,l)
+        await update_channel(world,status,time,l)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
