@@ -349,7 +349,33 @@ def speculate(world,legacy=None):
                             else:
                                 msg+="Condition uncertain, try to run trains more often."
     return msg
- 
+
+def dead_or_up(world, legacy=None):
+    """
+    Check if a world should be classified as "Dead" or "Up".
+    Uses the rule that a server is marked as "Up" if the timer is greater than 6 hours old.
+    Returns "Dead", otherwise.
+    """
+    now=datetime.datetime.utcnow()
+    l=0
+    l_text=""
+    if legacy[0].capitalize()=="L":
+        l=1
+        l_text=" (legacy) "
+    w=parse_world(world)
+
+    timecell="Up Times!"+worldTimeLoc(w,l)
+    statuscell="Up Times!"+worldStatusLoc(w,l)
+
+    time=datetime.datetime(1899,12,30)+datetime.timedelta(days=fetch_sheet(timecell)[0][0])
+
+    delta=now-time
+
+    if int(delta.total_seconds()) > 60*60*6:
+        return 'Up'
+    return 'Dead'
+
+
 def parse_parameters(time,leg):
     try:
         if time==None:
@@ -481,8 +507,9 @@ async def scoutcancel(ctx, world, time=None, legacy="0"):
     l=parm[1]
     stb=parm[2]
     if stb==0:
-        await update_sheet(world,"Up",time,l)
-        await update_channel(world,"Up",time,l)
+        world_state=dead_or_up(world,l)
+        await update_sheet(world,world_state,time,l)
+        await update_channel(world,world_state,time,l)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
