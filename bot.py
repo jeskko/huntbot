@@ -105,6 +105,9 @@ async def bot_log(msg):
 async def sonar_log(msg):
     await bot.get_channel(SONAR_CHANNEL).send(msg)
 
+async def scout_log(msg):
+    await bot.get_channel(BOT_CHANNEL).send(msg)
+
 async def update_channel(server, status, started, legacy=None):
 
     ids = {
@@ -1233,17 +1236,24 @@ async def process_relay(relay):
                         await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was spotted with 100% HP!")
                     if (h_status[h_world][h_id]==1):
                         h_status[h_world][h_id]=2
+                        if h_players<10:
+                            await scout_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was reset with less than 10 players nearby, possible snipe attempt!")    
                         await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was reset!")
                 # below 90% hp 
                 if (h_hp<h_mhp*0.9):
                     if (h_status[h_world][h_id] != 1):
                             h_status[h_world][h_id]=1
+                            if h_players<10:
+                                await scout_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been pulled with {h_players} players nearby and is below 90% HP! Possible snipe as players nearby is less than 10!")    
                             await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been pulled with {h_players} players nearby and is below 90% HP!")
                 # killed
                 if (h_hp==0):
                     if (h_status[h_world][h_id] != 0):
                             h_status[h_world][h_id]=0
+                            if h_players<10:
+                                await scout_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed! Possible snipe as players nearby is less than 10 ({h_players})!")    
                             await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed!")
+                            
 
 @tasks.loop(count=None)
 async def websocketrunner():
