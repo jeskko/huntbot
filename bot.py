@@ -108,6 +108,9 @@ async def sonar_log(msg):
 async def scout_log(msg):
     await bot.get_channel(BOT_CHANNEL).send(msg)
 
+async def spec_log(msg):
+    await bot.get_channel(SPEC_CHANNEL).send(msg)
+
 async def update_channel(server, status, started, legacy=None):
 
     ids = {
@@ -429,6 +432,7 @@ SPREADSHEET_ID=os.getenv('SPREADSHEET_ID')
 LOG_CHANNEL=int(os.getenv('LOG_CHANNEL'))
 BOT_CHANNEL=int(os.getenv('BOT_CHANNEL'))
 SONAR_CHANNEL=int(os.getenv('SONAR_CHANNEL'))
+SPEC_CHANNEL=int(os.getenv('SPEC_CHANNEL'))
 DC_ASSET=os.getenv('DC_ASSET')
 WORLD_ASSET=os.getenv('WORLD_ASSET')
 HUNT_ASSET=os.getenv('HUNT_ASSET')
@@ -1204,6 +1208,13 @@ for h in s_hunts:
     s_huntnames[h['Id']]=h['Name']['English']
     s_huntexpansions[h['Id']]=h['Expansion']
 
+s_hunts_extra=list(filter(lambda s_hunt: (s_hunt['Rank']==3), s_hunt.values()))
+s_huntsidlist_extra=[]
+for h in s_hunts_extra:
+    s_huntsidlist_extra.append(h['Id'])
+    s_huntnames[h['Id']]=h['Name']['English']
+    s_huntexpansions[h['Id']]=h['Expansion']
+
 s_zonenames={}
 for s_z in s_zone.values():
     try:
@@ -1214,6 +1225,8 @@ h_status={}
 for s_w in s_worldidlist:
     h_status[s_w]={}
     for s_h in s_huntidlist:
+        h_status[s_w][s_h]=0
+    for s_h in s_huntsidlist_extra:
         h_status[s_w][s_h]=0
 
 async def process_relay(relay):
@@ -1253,20 +1266,45 @@ async def process_relay(relay):
                             if h_players<10:
                                 await scout_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed! Possible snipe as players nearby is less than 10 ({h_players})!")    
                             await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed!")
-                            
+
+            if (h_id in s_huntsidlist_extra and h_world in s_worldidlist):
+                h_hp=relay['Relay']['CurrentHp']
+                h_mhp=relay['Relay']['MaxHp']
+                h_players=relay['Relay']['Players']
+                # full hp
+                if (h_hp==h_mhp):
+                    if (h_status[h_world][h_id]==0):
+                        # was dead
+                        h_status[h_world][h_id]=2
+                    if (h_status[h_world][h_id]==1):
+                        h_status[h_world][h_id]=2
+                        if h_players<10:
+                            await spec_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was reset with less than 10 players nearby, possible snipe attempt!")    
+                # below 90% hp 
+                if (h_hp<h_mhp*0.9):
+                    if (h_status[h_world][h_id] != 1):
+                            h_status[h_world][h_id]=1
+                            if h_players<10:
+                                await spec_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been pulled with {h_players} players nearby and is below 90% HP! Possible snipe as players nearby is less than 10!")    
+                # killed
+                if (h_hp==0):
+                    if (h_status[h_world][h_id] != 0):
+                            h_status[h_world][h_id]=0
+                            if h_players<10:
+                                await spec_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed! Possible snipe as players nearby is less than 10 ({h_players})!")                                
 
 @tasks.loop(count=None)
 async def websocketrunner():
     while True:
         print("starting websocket runner")
-        async with connect(SONAR_WEBSOCKET) as websocket:
-            while True:
-                try:
+        try:
+            async with connect(SONAR_WEBSOCKET) as websocket:
+                while True:
                     message = json.loads(await websocket.recv())
                     await process_relay(message)
-                except websockets.exceptions.WebSocketException as err:
-                    print (f"Websocket exception happened: {err}")
-                    await asyncio.sleep(30)
+        except websockets.exceptions.WebSocketException as err:
+            print (f"Websocket exception happened: {err}")
+            await asyncio.sleep(30)
 
 SheetLoop.start()
 STLoop.start()
