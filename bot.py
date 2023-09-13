@@ -29,6 +29,11 @@ from apiclient import discovery
 
 from discord_webhook import DiscordWebhook,DiscordEmbed
 
+import time
+import json
+from urllib.request import urlopen,Request
+from websockets.client import connect
+import websockets.exceptions
 import httplib2
 
 def parse_world(world):
@@ -97,6 +102,8 @@ def worldStatusLoc(world,leg=None):
 async def bot_log(msg):
     await bot.get_channel(LOG_CHANNEL).send(msg)
 
+async def sonar_log(msg):
+    await bot.get_channel(SONAR_CHANNEL).send(msg)
 
 async def update_channel(server, status, started, legacy=None):
 
@@ -243,8 +250,6 @@ async def update_from_sheets():
             if ready == 1:
                 await update_channel(row[0],row[3],datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]),1)
 
-
-
 async def update_from_sheets_to_chat(legacy=None):
     range = 'Up Times!B3:E10'
     message="Endwalker status\n```"
@@ -269,11 +274,30 @@ async def update_from_sheets_to_chat(legacy=None):
                 t3_td=datetime.datetime.utcnow()-(datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]))
                 t3_h=int(divmod(t3_td.total_seconds(),3600)[0])
                 t3_m=int(divmod(divmod(t3_td.total_seconds(),3600)[1],60)[0])
-                t3=f"{t3_h}:{t3_m:02d}"
+                if t3_h<0:
+                    t3=""
+                else:
+                    t3=f"{t3_h}:{t3_m:02d}"
                 
                 taulu.append([row[0],t1,t2,t3,row[3]])
     message+=tabulate(taulu,headers="firstrow",tablefmt="fancy_grid")+"```"
     return message
+
+async def update_from_sheets_to_compact_chat(legacy=None):
+    range = 'Up Times!B33:D40'
+    values=fetch_sheet(range)
+    
+    if not values:
+        print('No data found.')
+    else:
+        taulu=[]
+        taulu.append(["Server","EW","SHB"])
+        for row in values:
+            if ready == 1:
+                taulu.append([row[0],row[1],row[2]])
+    message="```"+tabulate(taulu,headers="firstrow",tablefmt="fancy_grid")+"```"
+    return message
+
 
 def delta_to_words(delta):
     delta=abs(delta)
@@ -401,6 +425,13 @@ TOKEN=os.getenv('DISCORD_TOKEN')
 SPREADSHEET_ID=os.getenv('SPREADSHEET_ID')
 LOG_CHANNEL=int(os.getenv('LOG_CHANNEL'))
 BOT_CHANNEL=int(os.getenv('BOT_CHANNEL'))
+SONAR_CHANNEL=int(os.getenv('SONAR_CHANNEL'))
+DC_ASSET=os.getenv('DC_ASSET')
+WORLD_ASSET=os.getenv('WORLD_ASSET')
+HUNT_ASSET=os.getenv('HUNT_ASSET')
+ZONE_ASSET=os.getenv('ZONE_ASSET')
+SONAR_WEBSOCKET=os.getenv('SONAR_WEBSOCKET')
+
 WEBHOOK_TEST=os.getenv('WEBHOOK_TEST')
 WEBHOOK_ESC=os.getenv('WEBHOOK_ESC_FC')
 WEBHOOK_CC=os.getenv('WEBHOOK_CC')
@@ -417,6 +448,7 @@ WEBHOOK_LUCY=os.getenv('WEBHOOK_LUCY')
 WEBHOOK_KENZIE=os.getenv('WEBHOOK_KENZIE')
 WEBHOOK_BADGER=os.getenv('WEBHOOK_BADGER')
 WEBHOOK_DELIAH=os.getenv('WEBHOOK_DELIAH')
+WEBHOOK_SWEEPER=os.getenv('WEBHOOK_SWEEPER')
 
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
@@ -438,6 +470,7 @@ ROLE_ASHIE=int(os.getenv('ROLE_ASHIE'))
 ROLE_EW_BADGER=int(os.getenv('ROLE_BADGER_EW'))
 ROLE_SHB_BADGER=int(os.getenv('ROLE_BADGER_SHB'))
 ROLE_STB_BADGER=int(os.getenv('ROLE_BADGER_STB'))
+ROLE_SWEEPER=int(os.getenv('ROLE_SWEEPER'))
 
 ready = 0
 
@@ -493,7 +526,7 @@ async def scoutcancel(ctx, world, time=None, legacy="0"):
         if time>datetime.datetime.utcnow():
             time=time-datetime.timedelta(hours=6)
             status="Dead"
-            await ctx.send("Adjusting to time -6h and status to dead because timestamp in future.")
+            await ctx.send("Adjusting time -6h and status to dead because timestamp in future.")
         else:
             time=0
         await update_sheet(world,status,time,l)
@@ -592,6 +625,17 @@ async def getstatus(ctx, legacy="0"):
     if legacy[0].capitalize() == "L":
         leg=1
     msg=await update_from_sheets_to_chat(leg)
+    await ctx.send(msg)
+    await ctx.message.add_reaction("✅")
+
+@bot.command(name="cstatus", aliases=['compactstatus','cstat','cs'],help='Get compact train status')
+async def getstatus(ctx):
+    if ctx.channel.id != BOT_CHANNEL:
+        print (f"{BOT_CHANNEL} != {ctx.channel.id}")
+        return
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
+    
+    msg=await update_from_sheets_to_compact_chat()
     await ctx.send(msg)
     await ctx.message.add_reaction("✅")
 
@@ -904,11 +948,21 @@ async def advertise(ctx, world, start, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_BADGER,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()    
             
-            # deliah server
+# deliah server
             print ("deliah")
             msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_DELIAH,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
+
+# sweeper server
+            print ("sweeper")
+            mentions={
+                    "roles": [ROLE_SWEEPER]
+            }
+            msg=f"<@&{ROLE_SWEEPER}> [{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_SWEEPER,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
 
             time=parm[0]
             if stb==0: 
@@ -1077,6 +1131,14 @@ async def madvertise(ctx, message, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_DELIAH,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
+# sweeper server
+            print ("sweeper")
+            mentions={
+                    "roles": [ROLE_SWEEPER]
+            }
+            msg=f"<@&{ROLE_SWEEPER}> {message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_SWEEPER,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
@@ -1108,8 +1170,97 @@ async def StatusLoop():
 async def SheetLoop():
     await update_from_sheets()
 
+# sonar stuff init
+
+print (DC_ASSET)
+with urlopen(Request(DC_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+    s_datacenter=json.load(url)
+with urlopen(Request(WORLD_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+    s_world=json.load(url)
+with urlopen(Request(HUNT_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+    s_hunt=json.load(url)
+with urlopen(Request(ZONE_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+    s_zone=json.load(url)
+
+# we're interested in light dc
+
+s_dc=list(filter(lambda s_datacenter: s_datacenter['Name']=="Light", s_datacenter.values()))[0]
+s_worlds=list(filter(lambda s_world: s_world['DatacenterId']==(s_dc['Id']), s_world.values()))
+s_worldidlist=[]
+s_worldnames={}
+for s_w in s_worlds:
+    s_worldidlist.append(s_w['Id'])
+    s_worldnames[s_w['Id']]=s_w['Name']
+
+s_hunts=list(filter(lambda s_hunt: (s_hunt['Rank']==2 and s_hunt['Expansion']>=4), s_hunt.values()))
+s_huntidlist=[]
+s_huntnames={}
+s_huntexpansions={}
+for h in s_hunts:
+    s_huntidlist.append(h['Id'])
+    s_huntnames[h['Id']]=h['Name']['English']
+    s_huntexpansions[h['Id']]=h['Expansion']
+
+s_zonenames={}
+for s_z in s_zone.values():
+    try:
+        s_zonenames[int(s_z['Id'])]=s_z['Name']['English']
+    except KeyError:
+        pass
+h_status={}  
+for s_w in s_worldidlist:
+    h_status[s_w]={}
+    for s_h in s_huntidlist:
+        h_status[s_w][s_h]=0
+
+async def process_relay(relay):
+    if ready == 1:
+        type=relay["Relay"]["Type"]
+        
+        if (type=="Hunt"):
+            h_id=relay["Relay"]["Id"]
+            h_world=relay['Relay']['WorldId']
+            h_zone=relay['Relay']['ZoneId']
+            if (h_id in s_huntidlist and h_world in s_worldidlist):
+                h_hp=relay['Relay']['CurrentHp']
+                h_mhp=relay['Relay']['MaxHp']
+                h_players=relay['Relay']['Players']
+                # full hp
+                if (h_hp==h_mhp):
+                    if (h_status[h_world][h_id]==0):
+                        # was dead
+                        h_status[h_world][h_id]=2
+                        await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was spotted with 100% HP!")
+                    if (h_status[h_world][h_id]==1):
+                        h_status[h_world][h_id]=2
+                        await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was reset!")
+                # below 90% hp 
+                if (h_hp<h_mhp*0.9):
+                    if (h_status[h_world][h_id] != 1):
+                            h_status[h_world][h_id]=1
+                            await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been pulled with {h_players} players nearby and is below 90% HP!")
+                # killed
+                if (h_hp==0):
+                    if (h_status[h_world][h_id] != 0):
+                            h_status[h_world][h_id]=0
+                            await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed!")
+
+@tasks.loop(count=None)
+async def websocketrunner():
+    while True:
+        print("starting websocket runner")
+        async with connect(SONAR_WEBSOCKET) as websocket:
+            while True:
+                try:
+                    message = json.loads(await websocket.recv())
+                    await process_relay(message)
+                except websockets.exceptions.WebSocketException as err:
+                    print (f"Websocket exception happened: {err}")
+                    await asyncio.sleep(30)
+
 SheetLoop.start()
 STLoop.start()
 StatusLoop.start()
+websocketrunner.start()
 
 bot.run(TOKEN)
