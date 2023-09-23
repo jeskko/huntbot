@@ -456,6 +456,7 @@ WEBHOOK_KENZIE=os.getenv('WEBHOOK_KENZIE')
 WEBHOOK_BADGER=os.getenv('WEBHOOK_BADGER')
 WEBHOOK_DELIAH=os.getenv('WEBHOOK_DELIAH')
 WEBHOOK_SWEEPER=os.getenv('WEBHOOK_SWEEPER')
+WEBHOOK_UNICORN=os.getenv('WEBHOOK_UNICORN')
 
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
@@ -478,6 +479,9 @@ ROLE_EW_BADGER=int(os.getenv('ROLE_BADGER_EW'))
 ROLE_SHB_BADGER=int(os.getenv('ROLE_BADGER_SHB'))
 ROLE_STB_BADGER=int(os.getenv('ROLE_BADGER_STB'))
 ROLE_SWEEPER=int(os.getenv('ROLE_SWEEPER'))
+ROLE_EW_UNICORN=int(os.getenv('ROLE_UNICORN_EW'))
+ROLE_SHB_UNICORN=int(os.getenv('ROLE_UNICORN_SHB'))
+ROLE_STB_UNICORN=int(os.getenv('ROLE_UNICORN_STB'))
 
 ready = 0
 
@@ -970,6 +974,21 @@ async def advertise(ctx, world, start, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_SWEEPER,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
+# unicorn server
+            print ("unicorn")
+            mentions={
+                "roles": [ROLE_EW_UNICORN, ROLE_SHB_UNICORN, ROLE_STB_UNICORN]
+            }
+            if l==0:
+                msg=f"<@&{ROLE_EW_UNICORN}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+            if l==1:
+                msg=f"<@&{ROLE_SHB_UNICORN}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_UNICORN}> **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+
+            webhook = DiscordWebhook(url=WEBHOOK_UNICORN,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()    
+
 
             time=parm[0]
             if stb==0: 
@@ -1146,6 +1165,22 @@ async def madvertise(ctx, message, legacy="0"):
             msg=f"<@&{ROLE_SWEEPER}> {message} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_SWEEPER,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
+
+# unicorn discord
+            print ("unicorn")
+            mentions={
+                "roles": [ROLE_EW_UNICORN, ROLE_SHB_UNICORN, ROLE_STB_UNICORN]
+            }
+            if l==0:
+                msg=f"<@&{ROLE_EW_UNICORN}> {message} (Conductor: {username})."
+            if l==1:
+                msg=f"<@&{ROLE_SHB_UNICORN}> {message} (Conductor: {username})."
+            if stb==1:
+                msg=f"<@&{ROLE_STB_UNICORN}> {message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_UNICORN,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# all sent
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
