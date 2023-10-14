@@ -457,6 +457,8 @@ WEBHOOK_BADGER=os.getenv('WEBHOOK_BADGER')
 WEBHOOK_DELIAH=os.getenv('WEBHOOK_DELIAH')
 WEBHOOK_SWEEPER=os.getenv('WEBHOOK_SWEEPER')
 WEBHOOK_UNICORN=os.getenv('WEBHOOK_UNICORN')
+WEBHOOK_CTLANTAA=os.getenv('WEBHOOK_CTLANTAA')
+WEBHOOK_IZZY=os.getenv('WEBHOOK_IZZY')
 
 ROLE_EW_TEST=int(os.getenv('ROLE_TEST_EW'))
 ROLE_SHB_TEST=int(os.getenv('ROLE_TEST_SHB'))
@@ -989,6 +991,19 @@ async def advertise(ctx, world, start, legacy="0"):
             webhook = DiscordWebhook(url=WEBHOOK_UNICORN,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()    
 
+# ctlantaa server
+            print ("ctlantaa")
+            msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_CTLANTAA,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# izzy server
+            print ("izzy")
+            msg=f"[{world}] Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_IZZY,rate_limit_retry=True,content=msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# all done
 
             time=parm[0]
             if stb==0: 
@@ -1178,6 +1193,18 @@ async def madvertise(ctx, message, legacy="0"):
             if stb==1:
                 msg=f"<@&{ROLE_STB_UNICORN}> {message} (Conductor: {username})."
             webhook = DiscordWebhook(url=WEBHOOK_UNICORN,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# ctlantaa server
+            print ("ctlantaa")
+            msg=f"{message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_CTLANTAA,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
+            resp=webhook.execute()
+
+# izzy server
+            print ("izzy")
+            msg=f"{message} (Conductor: {username})."
+            webhook = DiscordWebhook(url=WEBHOOK_IZZY,rate_limit_retry=True,content=msg,allowed_mentions=mentions,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()
 
 # all sent
