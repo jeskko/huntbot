@@ -35,6 +35,7 @@ from urllib.request import urlopen,Request
 from websockets.client import connect
 import websockets.exceptions
 import httplib2
+import sqlite3
 
 def parse_world(world):
     worlds = {
@@ -337,7 +338,6 @@ def spec_delta(time,start_s,end_s,type):
             msg=f"Marks have started to despawn {st} ago and will be fully despawned in {en}."
     return msg
 
-
 def speculate(world,legacy=None):
     now=datetime.datetime.utcnow()
     l=0
@@ -378,6 +378,96 @@ def speculate(world,legacy=None):
                                 msg+=spec_delta(time,293400,324000,"spawn")
                             else:
                                 msg+="Condition uncertain, try to run trains more often."
+       # marks alive, last 18 hours
+    sel_alive="""
+SELECT count(*) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastseen > datetime('now','-20 hours') AND lastfound > datetime('now', '-20 hours') AND currenthp!=0
+              """
+    # marks that should have respawned but no sighting
+    sel_spawned="""
+SELECT count(*) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-20 hours') AND lastkilled < datetime('now','-6 hours') AND currenthp=0
+                 """
+    # marks killed during last 6 hours
+    sel_spawning="""
+SELECT count(*) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-6 hours') AND lastkilled < datetime('now','-4 hours') AND currenthp=0
+                 """
+    # marks killed during last 4 hours
+    sel_dead="""
+SELECT count(*) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-4 hours') AND currenthp=0
+             """
+
+    if l==0:
+        exp=5
+    else:
+        exp=4
+
+    cursor.execute(sel_alive,(exp, w))
+    alive=cursor.fetchall()[0][0]
+    
+    cursor.execute(sel_spawned,(exp, w))
+    spawned=cursor.fetchall()[0][0]
+
+    cursor.execute(sel_spawning,(exp, w))
+    spawning=cursor.fetchall()[0][0]
+    
+    cursor.execute(sel_dead,(exp, w))
+    dead=cursor.fetchall()[0][0]
+
+    msg+=f"\nSonar data suggests that {alive} marks are alive, {spawned} marks should have spawned, {spawning} marks have potential to spawn and {dead} marks are dead."
+
+    return msg
+
+def mapping(world,legacy=None):
+    l=0
+    l_text=""
+    if legacy[0].capitalize()=="L":
+        l=1
+        l_text=" (legacy) "
+    
+    w=parse_world(world)
+
+    if l==0:
+        exp=5
+    else:
+        exp=4
+    
+    ishort={0: '',
+            1: '',
+            2: '',
+            3: ''}
+    
+    ilong={0: '',
+           1: '  (Instance ONE)',
+           2: '  (Instance TWO)',
+           3: '  (Instance THREE)'}
+    
+    sel="""
+SELECT hunts.name, zones.name,hunt.instanceid, 
+       round(((41 / zones.scale) * (((hunt.x + zones.offset_x)*zones.scale + 1024) / 2048)+1),1),
+       round(((41 / zones.scale) * (((hunt.y + zones.offset_y)*zones.scale + 1024) / 2048)+1),1) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+INNER JOIN zones on zones.id=hunt.zoneid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastseen > datetime('now','-20 hours') AND lastfound > datetime('now','-20 hours') AND currenthp != 0
+ORDER BY hunt.zoneid,hunt.instanceid
+        """
+    cursor.execute(sel,(exp,w))
+    h=cursor.fetchall()
+    msg="Sonar data suggests following mapping:\n```\n"
+    for l in h:
+        msg+=f"({l[0]}) {l[1]}{ishort[l[2]]} ( {l[3]} , {l[4]} ){ilong[l[2]]}\n"
+    msg+="```"
     return msg
  
 def parse_parameters(time,leg):
@@ -498,6 +588,16 @@ async def spec(ctx,world,legacy="0"):
     msg=speculate(world,legacy)
     await ctx.send(msg)
 
+@bot.command(name='mapping', aliases=["map",], help='Check mapping data from Sonar')
+async def spec(ctx,world,legacy="0"):
+    if ctx.channel.id != BOT_CHANNEL:
+        print (f"{BOT_CHANNEL} != {ctx.channel.id}")
+        return
+    await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
+    msg=mapping(world,legacy)
+    await ctx.send(msg)
+
+
 @bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.')
 async def scouting(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != BOT_CHANNEL:
@@ -602,6 +702,24 @@ async def endtrain(ctx, world, time=None, legacy="0"):
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
+        
+    # statistics 
+    sel_stat="""
+SELECT round(avg(players)) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-30 minutes') AND players>10
+             """
+
+    if l==0:
+        exp=5
+    else:
+        exp=4
+
+    cursor.execute(sel_stat,(exp, w))
+    stats=cursor.fetchall()[0][0]
+    
+    scout_log(f"Average participation on the train seemed to be about {stats} players.")
 
 
 @bot.command(name='up', aliases=['reset'],help='Reset train')
@@ -1240,133 +1358,236 @@ async def SheetLoop():
     await update_from_sheets()
 
 # sonar stuff init
+conn = sqlite3.connect('hunt.db',detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
 
-print (DC_ASSET)
-with urlopen(Request(DC_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
-    s_datacenter=json.load(url)
-with urlopen(Request(WORLD_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
-    s_world=json.load(url)
-with urlopen(Request(HUNT_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
-    s_hunt=json.load(url)
-with urlopen(Request(ZONE_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
-    s_zone=json.load(url)
+cursor=conn.cursor()
 
 # we're interested in light dc
 
-s_dc=list(filter(lambda s_datacenter: s_datacenter['Name']=="Light", s_datacenter.values()))[0]
-s_worlds=list(filter(lambda s_world: s_world['DatacenterId']==(s_dc['Id']), s_world.values()))
-s_worldidlist=[]
-s_worldnames={}
-for s_w in s_worlds:
-    s_worldidlist.append(s_w['Id'])
-    s_worldnames[s_w['Id']]=s_w['Name']
+dc=("Light",)
+sel="SELECT worlds.id from worlds INNER JOIN dcs ON worlds.datacenterid = dcs.id WHERE dcs.name = ?"
+cursor.execute(sel,dc)
+r=cursor.fetchall()
 
-s_hunts=list(filter(lambda s_hunt: (s_hunt['Rank']==2 and s_hunt['Expansion']>=4), s_hunt.values()))
-s_huntidlist=[]
-s_huntnames={}
-s_huntexpansions={}
-for h in s_hunts:
-    s_huntidlist.append(h['Id'])
-    s_huntnames[h['Id']]=h['Name']['English']
-    s_huntexpansions[h['Id']]=h['Expansion']
+worldidlist=[]
+for w in r:
+    worldidlist.append(w[0])
 
-s_hunts_extra=list(filter(lambda s_hunt: (s_hunt['Rank']==3), s_hunt.values()))
-s_huntsidlist_extra=[]
-for h in s_hunts_extra:
-    s_huntsidlist_extra.append(h['Id'])
-    s_huntnames[h['Id']]=h['Name']['English']
-    s_huntexpansions[h['Id']]=h['Expansion']
+# we're interested in A-rank hunts
 
-s_zonenames={}
-for s_z in s_zone.values():
-    try:
-        s_zonenames[int(s_z['Id'])]=s_z['Name']['English']
-    except KeyError:
-        pass
-h_status={}  
-for s_w in s_worldidlist:
-    h_status[s_w]={}
-    for s_h in s_huntidlist:
-        h_status[s_w][s_h]=0
-    for s_h in s_huntsidlist_extra:
-        h_status[s_w][s_h]=0
+cursor.execute('SELECT id from hunts WHERE rank=2')
+r=cursor.fetchall()
 
-async def process_relay(relay):
-    if ready == 1:
-        type=relay["Relay"]["Type"]
-        
-        if (type=="Hunt"):
-            h_id=relay["Relay"]["Id"]
-            h_world=relay['Relay']['WorldId']
-            h_zone=relay['Relay']['ZoneId']
-            if (h_id in s_huntidlist and h_world in s_worldidlist):
-                h_hp=relay['Relay']['CurrentHp']
-                h_mhp=relay['Relay']['MaxHp']
-                h_players=relay['Relay']['Players']
-                # full hp
-                if (h_hp==h_mhp):
-                    if (h_status[h_world][h_id]==0):
-                        # was dead
-                        h_status[h_world][h_id]=2
-                        await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was spotted with 100% HP!")
-                    if (h_status[h_world][h_id]==1):
-                        h_status[h_world][h_id]=2
-                        if h_players<10:
-                            await scout_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was reset with less than 10 players nearby, possible snipe attempt!")    
-                        await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was reset!")
-                # below 90% hp 
-                if (h_hp<h_mhp*0.9):
-                    if (h_status[h_world][h_id] != 1):
-                            h_status[h_world][h_id]=1
-                            if h_players<10:
-                                await scout_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been pulled with {h_players} players nearby and is below 90% HP! Possible snipe as players nearby is less than 10!")    
-                            await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been pulled with {h_players} players nearby and is below 90% HP!")
-                # killed
-                if (h_hp==0):
-                    if (h_status[h_world][h_id] != 0):
-                            h_status[h_world][h_id]=0
-                            if h_players<10:
-                                await scout_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed! Possible snipe as players nearby is less than 10 ({h_players})!")    
-                            await sonar_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed!")
+huntidlist=[]
+for h in r:
+    huntidlist.append(h[0])
 
-            if (h_id in s_huntsidlist_extra and h_world in s_worldidlist):
-                h_hp=relay['Relay']['CurrentHp']
-                h_mhp=relay['Relay']['MaxHp']
-                h_players=relay['Relay']['Players']
-                # full hp
-                if (h_hp==h_mhp):
-                    if (h_status[h_world][h_id]==0):
-                        # was dead
-                        h_status[h_world][h_id]=2
-                    if (h_status[h_world][h_id]==1):
-                        h_status[h_world][h_id]=2
-                        if h_players<10:
-                            await spec_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} was reset with less than 10 players nearby, possible snipe attempt!")    
-                # below 90% hp 
-                if (h_hp<h_mhp*0.9):
-                    if (h_status[h_world][h_id] != 1):
-                            h_status[h_world][h_id]=1
-                            if h_players<10:
-                                await spec_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been pulled with {h_players} players nearby and is below 90% HP! Possible snipe as players nearby is less than 10!")    
-                # killed
-                if (h_hp==0):
-                    if (h_status[h_world][h_id] != 0):
-                            h_status[h_world][h_id]=0
-                            if h_players<10:
-                                await spec_log(f"{s_worldnames[h_world]} {s_huntnames[h_id]} has been killed! Possible snipe as players nearby is less than 10 ({h_players})!")                                
+# SHB+ A-rank hunts for snipe notifications
+
+cursor.execute('SELECT id from hunts WHERE rank=2 AND expansion>=4')
+r=cursor.fetchall()
+
+huntidlist_nuts=[]
+for h in r:
+    huntidlist_nuts.append(h[0])
+
+# S-rank list for special purposes
+
+cursor.execute('SELECT id from hunts WHERE rank=3')
+r=cursor.fetchall()
+
+huntidlist_s=[]
+for h in r:
+    huntidlist_s.append(h[0])
+
+check="""SELECT 
+    key, huntid, worldid, 
+    zoneid, instanceid, players, 
+    currenthp, maxhp, lastseen, 
+    lastfound, lastkilled, lastupdated, 
+    lastuntouched,actorid,status,x,y
+    FROM 'hunt' WHERE key = ?"""
+ins="""INSERT OR REPLACE INTO 'hunt' (
+    key, huntid, worldid, 
+    zoneid, instanceid, players, 
+    currenthp, maxhp, lastseen, 
+    lastfound, lastkilled, lastupdated, 
+    lastuntouched,actorid,status,x,y) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+
+def relay_to_sql(msg,status):
+    return (msg['Relay']['Key'],
+       msg['Relay']['Id'],
+       msg['Relay']['WorldId'],
+       msg['Relay']['ZoneId'],
+       msg['Relay']['InstanceId'],
+       msg['Relay']['Players'],
+       msg['Relay']['CurrentHp'],
+       msg['Relay']['MaxHp'],
+       msg['LastSeen'],
+       msg['LastFound'],
+       msg['LastKilled'],
+       msg['LastUpdated'],
+       msg['LastUntouched'],
+       msg['Relay']['ActorId'],
+       status,
+       msg['Relay']['Coords']['X'],
+       msg['Relay']['Coords']['Y']
+)
+    
+def sql_to_relay(sql):
+    r={}
+    r['Key']=sql[0]
+    r['Id']=sql[1]
+    r['WorldId']=sql[2]
+    r['ZoneId']=sql[3]
+    r['InstanceId']=sql[4]
+    r['Players']=sql[5]
+    r['CurrentHp']=sql[6]
+    r['MaxHp']=sql[7]
+    r['LastSeen']=sql[8]
+    r['LastFound']=sql[9]
+    r['LastKilled']=sql[10]
+    r['LastUpdated']=sql[11]
+    r['LastUntouched']=sql[12]
+    r['ActorId']=sql[13]
+    r['Status']=sql[14]
+    r['x']=sql[15]
+    r['y']=sql[16]
+    return (r)    
+
+
+async def huntname(msg):
+    expansions={1: 'ARR',
+                2: 'HW',
+                3: 'STB',
+                4: 'SHB',
+                5: 'EW'}
+    instances={0: '',
+               1: ' (1)',
+               2: ' (2)',
+               3: ' (3)'}
+    sel="SELECT name,expansion FROM hunts WHERE id = ?"
+    h=cursor.execute(sel,(msg["Relay"]["Id"],)).fetchone()
+    sel="SELECT name FROM worlds WHERE id = ?"
+    w=cursor.execute(sel,(msg["Relay"]["WorldId"],)).fetchone()
+    return ({'exp': expansions[h[1]],
+             'world': w[0],
+             'name': h[0],
+             'instance': instances[int(msg["Relay"]["InstanceId"])]})
+
 
 @tasks.loop(count=None)
 async def websocketrunner():
+    await asyncio.sleep(15)
     while True:
-        print("starting websocket runner")
         try:
             async with connect(SONAR_WEBSOCKET) as websocket:
                 while True:
-                    message = json.loads(await websocket.recv())
-                    await process_relay(message)
-        except websockets.exceptions.WebSocketException as err:
-            print (f"Websocket exception happened: {err}")
-            await asyncio.sleep(30)
+                    try:
+                        s_msg = json.loads(await websocket.recv())
+                        if (s_msg["Relay"]["Type"]=="Hunt"):
+                            if (s_msg["Relay"]["WorldId"] in worldidlist):
+                                if (s_msg["Relay"]["Id"] in huntidlist):
+                                    s_msg["LastSeen"]=datetime.datetime.fromtimestamp(s_msg["LastSeen"]/1000)
+                                    s_msg["LastFound"]=datetime.datetime.fromtimestamp(s_msg["LastFound"]/1000)
+                                    s_msg["LastKilled"]=datetime.datetime.fromtimestamp(s_msg["LastKilled"]/1000)
+                                    s_msg["LastUpdated"]=datetime.datetime.fromtimestamp(s_msg["LastUpdated"]/1000)
+                                    s_msg["LastUntouched"]=datetime.datetime.fromtimestamp(s_msg["LastUntouched"]/1000)
+                                    
+                                    h=cursor.execute(check,(s_msg["Relay"]["Key"],)).fetchone()
+                                    if h==None:
+                                        d=await huntname(s_msg)
+                                        await sonar_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted first time after database refresh at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')                                    
+                                        status=1
+                                        if s_msg["LastUpdated"]==s_msg["LastUntouched"]:
+                                            status=2
+                                    else: 
+                                        status=0
+                                        h=sql_to_relay(h)   
+                                        status=h["Status"]
+                                        # actorid changed -> new sighting
+                                        if (h["ActorId"] != s_msg["Relay"]["ActorId"]):
+                                            d=await huntname(s_msg)
+                                            await sonar_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted with a new actor id at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')
+                                            status=1
+                                            if s_msg["LastUpdated"]==s_msg["LastUntouched"]:
+                                                # untouched
+                                                status=2
+                                        if ((s_msg["LastUpdated"]-s_msg["LastUntouched"]).total_seconds()>15 and status!=1):
+                                            status=1
+                                            d=await huntname(s_msg)
+                                            await sonar_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby)')
+                                            if (s_msg["Relay"]["Players"]<10 and s_msg["Relay"]["Id"] in huntidlist_nuts):
+                                                scout_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby) (SNIPE?)')
+                                        if (s_msg["LastUpdated"]==s_msg["LastUntouched"] and status==1):
+                                            status=2
+                                            d=await huntname(s_msg)
+                                            await sonar_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby).')
+                                            if (s_msg["Relay"]["Players"]<10 and s_msg["Relay"]["Id"] in huntidlist_nuts):
+                                                await scout_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
+                                        if (s_msg["Relay"]["CurrentHp"]==0 and status != 0):
+                                            status=0
+                                            d=await huntname(s_msg)
+                                            await sonar_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby).')
+                                            if (s_msg["Relay"]["Players"]<10 and s_msg["Relay"]["Id"] in huntidlist_nuts):
+                                                await scout_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
+                                    h=relay_to_sql(s_msg,status)
+                                    cursor.execute(ins,h)
+                                if (s_msg["Relay"]["Id"] in huntidlist_s):
+                                    s_msg["LastSeen"]=datetime.datetime.fromtimestamp(s_msg["LastSeen"]/1000)
+                                    s_msg["LastFound"]=datetime.datetime.fromtimestamp(s_msg["LastFound"]/1000)
+                                    s_msg["LastKilled"]=datetime.datetime.fromtimestamp(s_msg["LastKilled"]/1000)
+                                    s_msg["LastUpdated"]=datetime.datetime.fromtimestamp(s_msg["LastUpdated"]/1000)
+                                    s_msg["LastUntouched"]=datetime.datetime.fromtimestamp(s_msg["LastUntouched"]/1000)
+                                    
+                                    h=cursor.execute(check,(s_msg["Relay"]["Key"],)).fetchone()
+                                    if h==None:
+                                        d=await huntname(s_msg)
+                                        print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted first time after database refresh at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')                                    
+                                        status=1
+                                        if s_msg["LastUpdated"]==s_msg["LastUntouched"]:
+                                            status=2
+                                    else: 
+                                        status=0
+                                        h=sql_to_relay(h)   
+                                        status=h["Status"]
+                                        # actorid changed -> new sighting
+                                        if (h["ActorId"] != s_msg["Relay"]["ActorId"]):
+                                            d=await huntname(s_msg)
+                                            print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted with a new actor id at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')
+                                            status=1
+                                            if s_msg["LastUpdated"]==s_msg["LastUntouched"]:
+                                                # untouched
+                                                status=2
+                                        if ((s_msg["LastUpdated"]-s_msg["LastUntouched"]).total_seconds()>15 and status!=1):
+                                            status=1
+                                            d=await huntname(s_msg)
+                                            print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby)')
+                                            if (s_msg["Relay"]["Players"]<10):
+                                                await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby) (SNIPE?)')
+                                        if (s_msg["LastUpdated"]==s_msg["LastUntouched"] and status==1):
+                                            status=2
+                                            d=await huntname(s_msg)
+                                            print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby).')
+                                            if (s_msg["Relay"]["Players"]<10):
+                                                await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
+                                        if (s_msg["Relay"]["CurrentHp"]==0 and status != 0):
+                                            status=0
+                                            d=await huntname(s_msg)
+                                            print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby).')
+                                            if (s_msg["Relay"]["Players"]<10):
+                                                await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
+                                    h=relay_to_sql(s_msg,status)
+                                    cursor.execute(ins,h)
+                                    
+                    except KeyError as errori:
+                        print (f"Keyerror tuli: {errori}")
+                        pass
+                    conn.commit()
+        except websockets.exceptions.WebSocketException as errori:
+            print (f"Socket error: {errori}")
+        await asyncio.sleep(30)
 
 SheetLoop.start()
 STLoop.start()

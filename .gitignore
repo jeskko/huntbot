@@ -1,0 +1,6 @@
+env
+.env
+.vscode
+hunt.db
+*.yaml
+*.json
