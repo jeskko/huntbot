@@ -708,7 +708,7 @@ async def endtrain(ctx, world, time=None, legacy="0"):
 SELECT round(avg(players)) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-30 minutes') AND players>10
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-45 minutes') AND players>10
              """
 
     if l==0:
@@ -1489,11 +1489,11 @@ async def websocketrunner():
                         if (s_msg["Relay"]["Type"]=="Hunt"):
                             if (s_msg["Relay"]["WorldId"] in worldidlist):
                                 if (s_msg["Relay"]["Id"] in huntidlist):
-                                    s_msg["LastSeen"]=datetime.datetime.fromtimestamp(s_msg["LastSeen"]/1000)
-                                    s_msg["LastFound"]=datetime.datetime.fromtimestamp(s_msg["LastFound"]/1000)
-                                    s_msg["LastKilled"]=datetime.datetime.fromtimestamp(s_msg["LastKilled"]/1000)
-                                    s_msg["LastUpdated"]=datetime.datetime.fromtimestamp(s_msg["LastUpdated"]/1000)
-                                    s_msg["LastUntouched"]=datetime.datetime.fromtimestamp(s_msg["LastUntouched"]/1000)
+                                    s_msg["LastSeen"]=datetime.datetime.utcfromtimestamp(s_msg["LastSeen"]/1000)
+                                    s_msg["LastFound"]=datetime.datetime.utcfromtimestamp(s_msg["LastFound"]/1000)
+                                    s_msg["LastKilled"]=datetime.datetime.utcfromtimestamp(s_msg["LastKilled"]/1000)
+                                    s_msg["LastUpdated"]=datetime.datetime.utcfromtimestamp(s_msg["LastUpdated"]/1000)
+                                    s_msg["LastUntouched"]=datetime.datetime.utcfromtimestamp(s_msg["LastUntouched"]/1000)
                                     
                                     h=cursor.execute(check,(s_msg["Relay"]["Key"],)).fetchone()
                                     if h==None:
@@ -1535,11 +1535,11 @@ async def websocketrunner():
                                     h=relay_to_sql(s_msg,status)
                                     cursor.execute(ins,h)
                                 if (s_msg["Relay"]["Id"] in huntidlist_s):
-                                    s_msg["LastSeen"]=datetime.datetime.fromtimestamp(s_msg["LastSeen"]/1000)
-                                    s_msg["LastFound"]=datetime.datetime.fromtimestamp(s_msg["LastFound"]/1000)
-                                    s_msg["LastKilled"]=datetime.datetime.fromtimestamp(s_msg["LastKilled"]/1000)
-                                    s_msg["LastUpdated"]=datetime.datetime.fromtimestamp(s_msg["LastUpdated"]/1000)
-                                    s_msg["LastUntouched"]=datetime.datetime.fromtimestamp(s_msg["LastUntouched"]/1000)
+                                    s_msg["LastSeen"]=datetime.datetime.utcfromtimestamp(s_msg["LastSeen"]/1000)
+                                    s_msg["LastFound"]=datetime.datetime.utcfromtimestamp(s_msg["LastFound"]/1000)
+                                    s_msg["LastKilled"]=datetime.datetime.utcfromtimestamp(s_msg["LastKilled"]/1000)
+                                    s_msg["LastUpdated"]=datetime.datetime.utcfromtimestamp(s_msg["LastUpdated"]/1000)
+                                    s_msg["LastUntouched"]=datetime.datetime.utcfromtimestamp(s_msg["LastUntouched"]/1000)
                                     
                                     h=cursor.execute(check,(s_msg["Relay"]["Key"],)).fetchone()
                                     if h==None:
