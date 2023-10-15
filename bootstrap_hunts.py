@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
 # this assumes that db has been initialized and assets are up to date
-from datetime import datetime
-import json,sqlite3,os
+import json,sqlite3,yaml
 from urllib.request import urlopen,Request
-from dotenv import load_dotenv
+from datetime import datetime
 
-load_dotenv()
-BOOT_URL=os.getenv('BOOTSTRAP_URL')
+with open('config.yaml','r') as file:
+    conf=yaml.safe_load(file)
 
+if conf["sonar"]["enable"]==False:
+    exit()
+    
 conn = sqlite3.connect('hunt.db',detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
-
 cursor=conn.cursor()
 
-with urlopen(Request(BOOT_URL, headers={'User-Agent': 'Nunyunuwi'})) as url:
+with urlopen(Request(conf["sonar"]["bootstrap"], headers={'User-Agent': 'Nunyunuwi'})) as url:
     hunts=json.load(url)
     
 ins="""INSERT OR REPLACE INTO 'hunt' (
