@@ -1519,7 +1519,7 @@ async def websocketrunner():
                                             d=await huntname(s_msg)
                                             await sonar_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby)')
                                             if (s_msg["Relay"]["Players"]<10 and s_msg["Relay"]["Id"] in huntidlist_nuts):
-                                                scout_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby) (SNIPE?)')
+                                                await scout_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby) (SNIPE?)')
                                         if (s_msg["LastUpdated"]==s_msg["LastUntouched"] and status==1):
                                             status=2
                                             d=await huntname(s_msg)
