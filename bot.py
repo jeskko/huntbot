@@ -716,10 +716,10 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND l
     else:
         exp=4
 
-    cursor.execute(sel_stat,(exp, w))
+    cursor.execute(sel_stat,(exp, world))
     stats=cursor.fetchall()[0][0]
     
-    scout_log(f"Average participation on the train seemed to be about {stats} players.")
+    await scout_log(f"Average participation on the train seemed to be about {stats} players.")
 
 
 @bot.command(name='up', aliases=['reset'],help='Reset train')
