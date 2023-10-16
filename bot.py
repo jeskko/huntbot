@@ -722,7 +722,7 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND l
     s_min=stats[1]
     s_max=stats[2]
     
-    await scout_log(f"Average participation on the train seemed to be about {s_avg} players. (varied between {s_min}-{s_max})")
+    await scout_log(f"Average participation on the train seemed to be at least {s_avg} players. (varied between {s_min}-{s_max})")
 
 
 @bot.command(name='up', aliases=['reset'],help='Reset train')
