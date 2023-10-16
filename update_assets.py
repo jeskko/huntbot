@@ -1,29 +1,28 @@
 #!/usr/bin/env python3
 
-import sqlite3,json,os
+import sqlite3,json,yaml 
 from urllib.request import urlopen,Request
-from dotenv import load_dotenv
 
-load_dotenv()
-DC_ASSET=os.getenv('DC_ASSET')
-WORLD_ASSET=os.getenv('WORLD_ASSET')
-HUNT_ASSET=os.getenv('HUNT_ASSET')
-ZONE_ASSET=os.getenv('ZONE_ASSET')
-REGION_ASSET=os.getenv('REGION_ASSET')
+with open('config.yaml','r') as file:
+    conf=yaml.safe_load(file)
+    
+assets=conf["sonar"]["asset"]
+
+if conf["sonar"]["enable"]==False:
+    exit()
 
 conn = sqlite3.connect('hunt.db')
-
 cursor=conn.cursor()
 
-with urlopen(Request(DC_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+with urlopen(Request(assets["dc"], headers={'User-Agent': 'Nunyunuwi'})) as url:
      datacenter=json.load(url)
-with urlopen(Request(WORLD_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+with urlopen(Request(assets["world"], headers={'User-Agent': 'Nunyunuwi'})) as url:
      world=json.load(url)
-with urlopen(Request(HUNT_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+with urlopen(Request(assets["hunt"], headers={'User-Agent': 'Nunyunuwi'})) as url:
     hunt=json.load(url)
-with urlopen(Request(ZONE_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+with urlopen(Request(assets["zone"], headers={'User-Agent': 'Nunyunuwi'})) as url:
     zone=json.load(url)
-with urlopen(Request(REGION_ASSET, headers={'User-Agent': 'Nunyunuwi'})) as url:
+with urlopen(Request(assets["region"], headers={'User-Agent': 'Nunyunuwi'})) as url:
     region=json.load(url)
         
 cursor.execute("DELETE FROM 'regions'")
