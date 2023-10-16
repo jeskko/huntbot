@@ -618,7 +618,7 @@ async def endtrain(ctx, world, time=None, legacy="0"):
         s_min=stats[1]
         s_max=stats[2]
         
-        await scout_log(f"Average participation on the train seemed to be about {s_avg} players. (varied between {s_min}-{s_max})")
+        await scout_log(f"Average participation on the train seemed to be at least {s_avg} players. (varied between {s_min}-{s_max})")
 
 @bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
 async def getstatus(ctx, legacy="0"):
