@@ -276,7 +276,10 @@ def speculate(world,legacy=None):
     if legacy[0].capitalize()=="L":
         l=1
         l_text=" (legacy) "
-    w=parse_world(world)
+    try:
+        w=parse_world(world)
+    except ValueError:
+        return("Invalid world.")
 
     timecell="Up Times!"+worldTimeLoc(w,l)
     statuscell="Up Times!"+worldStatusLoc(w,l)
@@ -284,7 +287,7 @@ def speculate(world,legacy=None):
     time=datetime.datetime(1899,12,30)+datetime.timedelta(days=fetch_sheet(timecell)[0][0])
     delta=now-time
     status=fetch_sheet(statuscell)[0][0]
- 
+
     msg=f"Status **{status}** for **{w}**{l_text} was set at {time}.\n"
     if status=="Dead":
         msg+=spec_delta(time,12600,21600,"spawn")
@@ -310,34 +313,34 @@ def speculate(world,legacy=None):
                             else:
                                 msg+="Condition uncertain, try to run trains more often."
     if conf["sonar"]["enable"]==True:
-       # marks alive, last 18 hours
+    # marks alive, last 18 hours
         sel_alive="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
 WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastseen > datetime('now','-20 hours') AND lastfound > datetime('now', '-20 hours') AND currenthp!=0
-              """
+            """
         # marks that should have respawned but no sighting
         sel_spawned="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
 WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-20 hours') AND lastkilled < datetime('now','-6 hours') AND currenthp=0
-                 """
+                """
         # marks killed during last 6 hours
         sel_spawning="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
 WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-6 hours') AND lastkilled < datetime('now','-4 hours') AND currenthp=0
-                 """
+                """
         # marks killed during last 4 hours
         sel_dead="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
 WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-4 hours') AND currenthp=0
-             """
+            """
 
         if l==0:
             exp=5
@@ -357,7 +360,6 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > date
         dead=cursor.fetchall()[0][0]
 
         msg+=f"\nSonar data suggests that {alive} marks are alive, {spawned} marks should have spawned, {spawning} marks have potential to spawn and {dead} marks are dead."
-
     return msg
 
 def mapping(world,legacy=None):
@@ -367,8 +369,11 @@ def mapping(world,legacy=None):
         if legacy[0].capitalize()=="L":
             l=1
             l_text=" (legacy) "
-        
-        w=parse_world(world)
+
+        try:
+            w=parse_world(world)
+        except ValueError:
+            return("Invalid world.")    
 
         if l==0:
             exp=5
@@ -465,7 +470,14 @@ async def scouting(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
-    world=parse_world(world)
+
+    try:
+        world=parse_world(world)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid world.")
+        return()
+    
     parm=parse_parameters(time,legacy)
     time=0
     l=parm[1]
@@ -488,7 +500,14 @@ async def scoutcancel(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
-    world=parse_world(world)
+
+    try:
+        world=parse_world(world)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid world.")
+        return()
+
     parm=parse_parameters(time,legacy)
     l=parm[1]
     stb=parm[2]
@@ -513,7 +532,14 @@ async def scoutend(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
-    world=parse_world(world)
+
+    try:
+        world=parse_world(world)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid world.")
+        return()
+
     parm=parse_parameters(time,legacy)
     time=0
     l=parm[1]
@@ -530,7 +556,14 @@ async def begintrain(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
-    world=parse_world(world)
+
+    try:
+        world=parse_world(world)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid world.")
+        return()
+
     parm=parse_parameters(time,legacy)
     time=parm[0]
     l=parm[1]
@@ -549,7 +582,13 @@ async def endtrain(ctx, world, time=None, legacy="0"):
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
 
-    world=parse_world(world)
+    try:
+        world=parse_world(world)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid world.")
+        return()
+
     parm=parse_parameters(time,legacy)
     time=parm[0]
     l=parm[1]
@@ -559,27 +598,27 @@ async def endtrain(ctx, world, time=None, legacy="0"):
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
+    if conf["sonar"]["enable"]==True:    
+        # statistics 
+        sel_stat="""
+    SELECT round(avg(players)),min(players),max(players) from hunt 
+    INNER JOIN hunts on hunts.id = hunt.huntid 
+    INNER JOIN worlds on worlds.id=hunt.worldid 
+    WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-45 minutes') AND players>10
+                """
+
+        if l==0:
+            exp=5
+        else:
+            exp=4
+
+        cursor.execute(sel_stat,(exp, world))
+        stats=cursor.fetchall()[0]
+        s_avg=stats[0]
+        s_min=stats[1]
+        s_max=stats[2]
         
-    # statistics 
-    sel_stat="""
-SELECT round(avg(players)),min(players),max(players) from hunt 
-INNER JOIN hunts on hunts.id = hunt.huntid 
-INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-45 minutes') AND players>10
-             """
-
-    if l==0:
-        exp=5
-    else:
-        exp=4
-
-    cursor.execute(sel_stat,(exp, world))
-    stats=cursor.fetchall()[0]
-    s_avg=stats[0]
-    s_min=stats[1]
-    s_max=stats[2]
-    
-    await scout_log(f"Average participation on the train seemed to be about {s_avg} players. (varied between {s_min}-{s_max})")
+        await scout_log(f"Average participation on the train seemed to be about {s_avg} players. (varied between {s_min}-{s_max})")
 
 @bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
 async def getstatus(ctx, legacy="0"):
@@ -638,7 +677,14 @@ async def advertise(ctx, world, start, legacy="0"):
 
     tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
     timestamp=int(mktime(tenmin.timetuple()))
-    world=parse_world(world)
+
+    try:
+        world=parse_world(world)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid world.")
+        return()
+
     parm=parse_parameters(None,legacy)
     l=parm[1]
     stb=parm[2]
