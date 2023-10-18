@@ -73,17 +73,33 @@ def worldStatusLoc(world,leg=None):
     return w[l]["status"]
 
 async def bot_log(msg):
-    await bot.get_channel(conf["discord"]["channels"]["log"]).send(msg)
+    try:
+        await bot.get_channel(conf["discord"]["channels"]["log"]).send(msg)
+    except discord.errors.DiscordServerError:
+        print ("ERROR: message sending failed")
+        pass
 
 async def sonar_log(msg):
-    await bot.get_channel(conf["discord"]["channels"]["sonar"]).send(msg)
-
+    try: 
+        await bot.get_channel(conf["discord"]["channels"]["sonar"]).send(msg)
+    except discord.errors.DiscordServerError:
+        print ("ERROR: message sending failed")
+        pass
+    
 async def scout_log(msg):
-    await bot.get_channel(conf["discord"]["channels"]["bot"]).send(msg)
-
+    try:
+        await bot.get_channel(conf["discord"]["channels"]["bot"]).send(msg)
+    except discord.errors.DiscordServerError:
+        print ("ERROR: message sending failed")
+        pass
+    
 async def spec_log(msg):
-    await bot.get_channel(conf["discord"]["channels"]["special"]).send(msg)
-
+    try:
+        await bot.get_channel(conf["discord"]["channels"]["special"]).send(msg)
+    except discord.errors.DiscordServerError:
+        print ("ERROR: message sending failed")
+        pass
+    
 async def update_channel(world, status, started, legacy=None):
     if legacy==1:
         l=5
