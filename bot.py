@@ -313,12 +313,19 @@ def speculate(world,legacy=None):
                             else:
                                 msg+="Condition uncertain, try to run trains more often."
     if conf["sonar"]["enable"]==True:
+    # marks probably despawned, last 18 hours
+        sel_despawn="""
+SELECT count(*) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastfound < datetime('now', '-22 hours') AND lastfound > datetime('now', '-48 hours') AND currenthp!=0
+            """        
     # marks alive, last 18 hours
         sel_alive="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastseen > datetime('now','-20 hours') AND lastfound > datetime('now', '-20 hours') AND currenthp!=0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastfound > datetime('now', '-22 hours') AND currenthp!=0
             """
         # marks that should have respawned but no sighting
         sel_spawned="""
@@ -349,6 +356,9 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > date
 
         cursor.execute(sel_alive,(exp, w))
         alive=cursor.fetchall()[0][0]
+
+        cursor.execute(sel_despawn,(exp, w))
+        despawn=cursor.fetchall()[0][0]
         
         cursor.execute(sel_spawned,(exp, w))
         spawned=cursor.fetchall()[0][0]
@@ -359,7 +369,7 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > date
         cursor.execute(sel_dead,(exp, w))
         dead=cursor.fetchall()[0][0]
 
-        msg+=f"\nSonar data suggests that {alive} marks are alive, {spawned} marks should have spawned, {spawning} marks have potential to spawn and {dead} marks are dead."
+        msg+=f"\nSonar data suggests that {alive} marks are alive, {spawned} marks should have spawned, {despawn} marks might have already despawned, {spawning} marks have potential to spawn and {dead} marks are dead."
     return msg
 
 def mapping(world,legacy=None):
@@ -659,7 +669,6 @@ def post_webhooks(msg, expansion):
                 rtxt=f"<@&{r}> "                
             print(w["name"])
             msgtxt=f"{rtxt}{msg}"
-            print(wh,msgtxt)
             webhook = DiscordWebhook(url=wh,rate_limit_retry=True,content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
             resp=webhook.execute()    
 
@@ -971,14 +980,10 @@ async def websocketrunner():
                                             status=1
                                             d=await huntname(s_msg)
                                             await sonar_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby)')
-                                            if (s_msg["Relay"]["Players"]<10 and s_msg["Relay"]["Id"] in huntidlist_nuts):
-                                                await scout_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby) (SNIPE?)')
                                         if (s_msg["LastUpdated"]==s_msg["LastUntouched"] and status==1):
                                             status=2
                                             d=await huntname(s_msg)
                                             await sonar_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby).')
-                                            if (s_msg["Relay"]["Players"]<10 and s_msg["Relay"]["Id"] in huntidlist_nuts):
-                                                await scout_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
                                         if (s_msg["Relay"]["CurrentHp"]==0 and status != 0):
                                             status=0
                                             d=await huntname(s_msg)
