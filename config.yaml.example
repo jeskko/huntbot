@@ -84,7 +84,7 @@ worlds:
                   status: E23
         - name: Raiden
           short: raiden
-          initial: l
+          initial: r
           6: 
                 channel: 123
                 time: C7
