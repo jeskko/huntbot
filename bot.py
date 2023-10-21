@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from __future__ import print_function
-
 import asyncio
 
 import os
@@ -32,6 +30,12 @@ with open('config.yaml','r') as file:
     conf=yaml.safe_load(file)
 
 def parse_world(world):
+    """
+    Convert text input to world name useable on various functions. 
+    Really simple, uses only the first letter of the input to figure out which world it is. Works on Light DC but on datacenters with overlapping initial letters this would be a problem.
+    Raises ValueError in case of invalid world being tried to be parsed.
+    """
+    
     initial=world[0].lower()
     w=[w for w in conf["worlds"] if w["initial"]==initial]
     try:
@@ -41,6 +45,11 @@ def parse_world(world):
     return name
 
 def worldTimeLoc(world,leg=None):
+    """
+    Find the sheet cell location for time value for a certain world.
+    leg==1 means SHB, otherwise EW.
+    """
+    
     if leg==1:
         l=5
     else:
@@ -52,6 +61,11 @@ def worldTimeLoc(world,leg=None):
     return w[l]["time"]
 
 def worldStatusLoc(world,leg=None):
+    """
+    Find the sheet cell location for status value for a certain world.
+    leg==1 means SHB, otherwise EW.    
+    """
+    
     if leg==1:
         l=5
     else:
@@ -63,34 +77,44 @@ def worldStatusLoc(world,leg=None):
     return w[l]["status"]
 
 async def bot_log(msg):
+    """Send message on bot log channel."""
+    
     try:
         await bot.get_channel(conf["discord"]["channels"]["log"]).send(msg)
-    except discord.errors.DiscordServerError:
-        print ("ERROR: message sending failed")
+    except discord.errors.DiscordServerError as e:
+        logging.error("Bot log message sending failed: {e}")
         pass
 
 async def sonar_log(msg):
+    """Send message on sonar log channel."""
+    
     try: 
         await bot.get_channel(conf["discord"]["channels"]["sonar"]).send(msg)
-    except discord.errors.DiscordServerError:
-        print ("ERROR: message sending failed")
+    except discord.errors.DiscordServerError as e:
+        logging.error("Sonar log message sending failed: {e}")
         pass
     
 async def scout_log(msg):
+    """Send message on scout channel."""
+    
     try:
         await bot.get_channel(conf["discord"]["channels"]["bot"]).send(msg)
-    except discord.errors.DiscordServerError:
-        print ("ERROR: message sending failed")
+    except discord.errors.DiscordServerError as e:
+        logging.error("Command channel message sending failed: {e}")
         pass
     
 async def spec_log(msg):
+    """Send message on special log channel."""
+    
     try:
         await bot.get_channel(conf["discord"]["channels"]["special"]).send(msg)
-    except discord.errors.DiscordServerError:
-        print ("ERROR: message sending failed")
+    except discord.errors.DiscordServerError as e:
+        logging.error("Special log message sending failed: {e}")
         pass
     
-async def update_channel(world, status, started, legacy=None):
+async def update_channel(world, status, legacy=None):
+    """Update channel name value. Will check if actual update is necessary to avoid rate limiting."""
+    
     if legacy==1:
         l=5
     else:
@@ -108,12 +132,14 @@ async def update_channel(world, status, started, legacy=None):
      
     chan=bot.get_channel(chanid)
     if chan.name != newname:
-        print("need to update name")
+        logging.debug(f"Updating channel name from {chan.name} to {newname}.")
         await chan.edit(name=newname)
     else:
-        print("no need to update name")
+        logging.debug("no need to update channel name.")
 
 async def update_sheet(world, status, time, legacy=None):
+    """Update the backend sheet."""
+    
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
     creds = None
@@ -158,6 +184,8 @@ async def update_sheet(world, status, time, legacy=None):
     response=sheet.values().batchUpdate(spreadsheetId=conf["google"]["spreadsheet"], body=body).execute()
 
 def fetch_sheet(range):
+    """Fetch data from the backend sheet."""
+    
     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
     creds = None
     secret=os.path.join(os.getcwd(),'nuny.json')
@@ -167,34 +195,37 @@ def fetch_sheet(range):
     try:
         result=sheet.values().get(spreadsheetId=conf["google"]["spreadsheet"], range=range, valueRenderOption="UNFORMATTED_VALUE").execute()
     except HttpError as err:
-        print(f"HttpError! {err.resp.status}")
+        logging.error(f"HttpError on fetch_sheet {err.resp.status}")
         return 0
     return result.get('values', [])
 
-
 async def update_from_sheets():
+    """Fetch data from backend sheet and update channel names."""
+    
     EW_RANGE = 'Up Times!B3:E10'
     LEGACY_RANGE = 'Up Times!B20:E27'
 
     values=fetch_sheet(EW_RANGE)
 
     if not values:
-        print('No data found.')
+        logging.error('No data found from fetch_sheet.')
     else:
         for row in values:
             if ready == 1:
-                await update_channel(row[0],row[3],datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]),0)
+                await update_channel(row[0],row[3],0)
 
     values=fetch_sheet(LEGACY_RANGE)
 
     if not values:
-        print('No data found.')
+        logging.error('No data found from fetch_sheet.')
     else:
         for row in values:
             if ready == 1:
-                await update_channel(row[0],row[3],datetime.datetime(1899,12,30)+datetime.timedelta(days=row[1]),1)
+                await update_channel(row[0],row[3],1)
 
 async def update_from_sheets_to_chat(legacy=None):
+    """Fetch status from backend sheet and make a status summary."""
+    
     range = 'Up Times!B3:E10'
     message="Endwalker status\n```"
     if legacy==1:
@@ -204,7 +235,7 @@ async def update_from_sheets_to_chat(legacy=None):
     values=fetch_sheet(range)
 
     if not values:
-        print('No data found.')
+        logging.error('No data found from fetch_sheet.')
     else:
         taulu=[]
         taulu.append(["Server","Status\nchanged","+6h","Status\nduration","Status"])
@@ -228,11 +259,13 @@ async def update_from_sheets_to_chat(legacy=None):
     return message
 
 async def update_from_sheets_to_compact_chat(legacy=None):
+    """Fetch status from backend sheet and make a compact status summary suitable for eg. mobile use."""
+    
     range = 'Up Times!B33:D40'
     values=fetch_sheet(range)
     
     if not values:
-        print('No data found.')
+        logging.error('No data found from fetch_sheet.')
     else:
         taulu=[]
         taulu.append(["Server","EW","SHB"])
@@ -244,6 +277,8 @@ async def update_from_sheets_to_compact_chat(legacy=None):
 
 
 def delta_to_words(delta):
+    """Format time delta to words."""
+    
     delta=abs(delta)
     delta_d=int(divmod(delta.total_seconds(),86400)[0])
     delta_h=int(divmod(divmod(delta.total_seconds(),86400)[1],3600)[0])
@@ -258,6 +293,8 @@ def delta_to_words(delta):
     return msg
 
 def spec_delta(time,start_s,end_s,type):
+    """Format timedelta and status to words."""
+    
     now=datetime.datetime.utcnow()
     start=time+datetime.timedelta(seconds=start_s)-now
     end=time+datetime.timedelta(seconds=end_s)-now
@@ -276,6 +313,12 @@ def spec_delta(time,start_s,end_s,type):
     return msg
 
 def speculate(world,legacy=None):
+    """
+    Speculate about hunt marks and their spawn/despawn status.
+    https://cdn.discordapp.com/attachments/884351171668619265/972159569658789978/unknown.png
+    Also checks Sonar data about the selected world.
+    """
+    
     now=datetime.datetime.utcnow()
     l=0
     l_text=""
@@ -379,6 +422,7 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > date
     return msg
 
 def mapping(world,legacy=None):
+    """Fetches mapping data estimate from Sonar."""
     if conf["sonar"]["enable"]==True:
         l=0
         l_text=""
@@ -427,6 +471,7 @@ def mapping(world,legacy=None):
     return msg
  
 def parse_parameters(time,leg):
+    """Tries to sanitize time and legacy parameters given on a bot command."""
     try:
         if time==None:
             time=datetime.datetime.utcnow()
@@ -510,7 +555,7 @@ async def scouting(ctx, world, time=None, legacy="0"):
             timecell="Up Times!"+worldTimeLoc(world,l)
             time=datetime.datetime(1899,12,30)+datetime.timedelta(days=fetch_sheet(timecell)[0][0])+datetime.timedelta(hours=6)    
         await update_sheet(world,"Scouting",time,l)
-        await update_channel(world,"Scouting",time,l)
+        await update_channel(world,"Scouting",l)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
@@ -542,7 +587,7 @@ async def scoutcancel(ctx, world, time=None, legacy="0"):
         else:
             time=0
         await update_sheet(world,status,time,l)
-        await update_channel(world,status,time,l)
+        await update_channel(world,status,l)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
@@ -664,12 +709,16 @@ async def getstatus(ctx):
     await ctx.message.add_reaction("✅")
 
 async def periodicstatus():
+    """Get statuses for different servers and log them on bot log channel. This is run from StatusLoop every 5 minutes."""
+    
     msg=await update_from_sheets_to_chat(0)
     await bot_log(msg)
     msg=await update_from_sheets_to_chat(1)
     await bot_log(msg)
 
 async def post_webhooks(msg, expansion):
+    """Send a message using webhook to multiple Discord servers."""
+    logging.debug("post_webhooks start")
     for w in conf["webhooks"]:
         wh=w["webhook"]
         r=w["roles"][expansion]
@@ -677,11 +726,15 @@ async def post_webhooks(msg, expansion):
             rtxt=""
             if r>1:
                 rtxt=f"<@&{r}> "                
-            print(w["name"])
+            logging.debug(f'Sending to {w["name"]}')
             msgtxt=f"{rtxt}{msg}"
             async with aiohttp.ClientSession() as session:
                 webhook=discord.Webhook.from_url(w["webhook"], session=session)
-                await webhook.send(content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")                        
+                try:
+                    await webhook.send(content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")                        
+                except discord.errors.HTTPException as e:
+                    logging.error(f'Unable to send message to {w["name"]}: {e}')
+                    pass
 
 @bot.command(name="advertise", aliases=['ad','shout','sh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). Additionally will set the server status to running.')
 async def advertise(ctx, world, start, legacy="0"):
@@ -724,14 +777,14 @@ async def advertise(ctx, world, start, legacy="0"):
     try:
         res=await bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
-        print ("Timed out")
+        logging.debug("Timed out while waiting for reaction.")
         await msg1.delete()
         await ctx.message.add_reaction('❌')
         pass
     else:
         if res:
             reaction, user=res
-            print (reaction.emoji)
+            logging.debug(reaction.emoji)
 
     expansion=6
     if l==1:
@@ -755,8 +808,7 @@ async def madvertise(ctx, message, legacy="0"):
         return
     username=ctx.message.author.display_name
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
-    print (message)
-
+    
     if len(message)<6:
         await ctx.message.add_reaction("❌")
         await ctx.send("Message needs to be over 5 characters.")
@@ -781,14 +833,14 @@ async def madvertise(ctx, message, legacy="0"):
     try:
         res=await bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
-        print ("Timed out")
+        logging.debug ("Timed out while waiting for reaction.")
         await msg1.delete()
         await ctx.message.add_reaction('❌')
         pass
     else:
         if res:
             reaction, user=res
-            print (reaction.emoji)
+            logging.debug (reaction.emoji)
 
     expansion=6
     if l==1:
@@ -815,9 +867,9 @@ async def StatusLoop():
     if ready == 1:
         try: 
             await periodicstatus()
-        except:
-            print ("statusloop error")
-
+        except Exception as e:
+             logging.error(f'StatusLoop error: {e}')
+             pass
 
 @tasks.loop(seconds = 300)
 async def SheetLoop():
@@ -1007,7 +1059,7 @@ async def websocketrunner():
                                     h=cursor.execute(check,(s_msg["Relay"]["Key"],)).fetchone()
                                     if h==None:
                                         d=await huntname(s_msg)
-                                        print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted first time after database refresh at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')                                    
+                                        logging.info(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted first time after database refresh at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')                                    
                                         status=1
                                         if s_msg["LastUpdated"]==s_msg["LastUntouched"]:
                                             status=2
@@ -1018,7 +1070,7 @@ async def websocketrunner():
                                         # actorid changed -> new sighting
                                         if (h["ActorId"] != s_msg["Relay"]["ActorId"]):
                                             d=await huntname(s_msg)
-                                            print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted with a new actor id at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')
+                                            logging.info(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted with a new actor id at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')
                                             status=1
                                             if s_msg["LastUpdated"]==s_msg["LastUntouched"]:
                                                 # untouched
@@ -1026,36 +1078,36 @@ async def websocketrunner():
                                         if ((s_msg["LastUpdated"]-s_msg["LastUntouched"]).total_seconds()>15 and status!=1):
                                             status=1
                                             d=await huntname(s_msg)
-                                            print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby)')
+                                            logging.info(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby)')
                                             if (s_msg["Relay"]["Players"]<10):
                                                 await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby) (SNIPE?)')
                                         if (s_msg["LastUpdated"]==s_msg["LastUntouched"] and status==1):
                                             status=2
                                             d=await huntname(s_msg)
-                                            print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby).')
+                                            logging.info(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby).')
                                             if (s_msg["Relay"]["Players"]<10):
                                                 await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
                                         if (s_msg["Relay"]["CurrentHp"]==0 and status != 0):
                                             status=0
                                             d=await huntname(s_msg)
-                                            print(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby).')
+                                            logging.info(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby).')
                                             if (s_msg["Relay"]["Players"]<10):
                                                 await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
                                     h=relay_to_sql(s_msg,status)
                                     cursor.execute(ins,h)
                                     
                     except KeyError as errori:
-                        print (f"Keyerror tuli: {errori}")
+                        logging.error(f"Got a KeyError in websocketrunner: {errori}")
                         pass
                     conn.commit()
         except websockets.exceptions.WebSocketException as errori:
-            print (f"Socket error: {errori}")
+            logging.error (f"Socket error in websocketrunner: {errori}")
         await asyncio.sleep(30)
 
 @bot.event
 async def on_ready():
     global ready
-    print(f'{bot.user} has connected to Discord!')
+    logging.info(f'{bot.user} has connected to Discord!')
     ready=1
     SheetLoop.start()
     STLoop.start()
