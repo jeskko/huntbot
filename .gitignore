@@ -5,3 +5,4 @@ venv
 hunt.db
 *.yaml
 *.json
+__pycache__
