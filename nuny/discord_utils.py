@@ -27,6 +27,6 @@ async def post_webhooks(msg, expansion):
                 webhook=discord.Webhook.from_url(w["webhook"], session=session)
                 try:
                     await webhook.send(content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")                        
-                except discord.errors.HTTPException as e:
+                except (discord.errors.HTTPException,discord.errors.NotFound) as e:
                     logging.error(f'Unable to send message to {w["name"]}: {e}')
                     pass
