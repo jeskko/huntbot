@@ -6,3 +6,4 @@ hunt.db
 *.yaml
 *.json
 __pycache__
+.idea/

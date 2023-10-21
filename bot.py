@@ -9,10 +9,10 @@ import logging
 from discord.ext import tasks
 
 import nuny.config
-import nuny.discord_utils 
+import nuny.discord_utils
 from nuny.misc_utils import periodicstatus
 from nuny.sheet_utils import update_from_sheets
-from nuny.sonar import websocketrunner 
+from nuny.sonar import websocketrunner
 
 import nuny.commands
 
@@ -26,7 +26,7 @@ async def STLoop():
 
 @tasks.loop(seconds = 1800)
 async def StatusLoop():
-    try: 
+    try:
         await periodicstatus()
     except Exception as e:
         logging.error(f'StatusLoop error: {e}')
@@ -45,8 +45,11 @@ async def on_ready():
     if nuny.config.conf["sonar"]["enable"]==True:
         websocketrunner.start()
 
-async def main():         
+async def main():
+    nuny.config.load_conf()
+    nuny.sonar.init_sonar()
     async with nuny.discord_utils.bot:
         await nuny.discord_utils.bot.start(nuny.config.conf["discord"]["token"])
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
