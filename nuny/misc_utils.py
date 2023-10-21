@@ -6,7 +6,6 @@ import nuny.config
 
 from nuny.sheet_utils import worldStatusLoc,worldTimeLoc,fetch_sheet,update_from_sheets_to_chat
 from nuny.sonar import sonar_speculate,sonar_mapping
-
 from nuny.log_utils import bot_log
 
 import nuny.discord_utils

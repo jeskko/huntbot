@@ -7,6 +7,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 
 import nuny.config
+
 def worldTimeLoc(world,leg=None):
     """
     Find the sheet cell location for time value for a certain world.

@@ -1,34 +1,35 @@
 import datetime,logging,asyncio
 from time import mktime
 
-from nuny.discord_utils import bot
-from nuny.config import conf
+import nuny.config
+import nuny.discord_utils
+
 from nuny.sheet_utils import update_from_sheets_to_chat,update_from_sheets_to_compact_chat
 from nuny.sheet_utils import worldStatusLoc,worldTimeLoc,fetch_sheet,update_sheet,update_channel
 from nuny.log_utils import bot_log,scout_log
 from nuny.misc_utils import speculate,mapping,parse_parameters,parse_world,post_webhooks
-import nuny.db_utils 
+from nuny.sonar import sonar_stats
 
-@bot.command(name='speculate',help='Speculate about status of a certain world')
+@nuny.discord_utils.bot.command(name='speculate',help='Speculate about status of a certain world')
 async def spec(ctx,world,legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     msg=speculate(world,legacy)
     await ctx.send(msg)
 
-@bot.command(name='mapping', aliases=["map",], help='Check mapping data from Sonar')
+@nuny.discord_utils.bot.command(name='mapping', aliases=["map",], help='Check mapping data from Sonar')
 async def spec(ctx,world,legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     msg=mapping(world,legacy)
     await ctx.send(msg)
 
 
-@bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.')
+@nuny.discord_utils.bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.')
 async def scouting(ctx, world, time=None, legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
 
@@ -56,9 +57,9 @@ async def scouting(ctx, world, time=None, legacy="0"):
     else:
         await ctx.message.add_reaction("❓")
 
-@bot.command(name='scoutcancel', aliases=['cancel', 'sccancel', 'scc'], help="Cancel scouting. Return server to up status.")
+@nuny.discord_utils.bot.command(name='scoutcancel', aliases=['cancel', 'sccancel', 'scc'], help="Cancel scouting. Return server to up status.")
 async def scoutcancel(ctx, world, time=None, legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
 
@@ -88,9 +89,9 @@ async def scoutcancel(ctx, world, time=None, legacy="0"):
     else:
         await ctx.message.add_reaction("❓")
 
-@bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.')
+@nuny.discord_utils.bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.')
 async def scoutend(ctx, world, time=None, legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
 
@@ -112,9 +113,9 @@ async def scoutend(ctx, world, time=None, legacy="0"):
         await ctx.message.add_reaction("❓")
 
 
-@bot.command(name='start', aliases=['begin','run','go'],help='Start train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
+@nuny.discord_utils.bot.command(name='start', aliases=['begin','run','go'],help='Start train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
 async def begintrain(ctx, world, time=None, legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
 
@@ -137,9 +138,9 @@ async def begintrain(ctx, world, time=None, legacy="0"):
         await ctx.message.add_reaction("❓")
 
 
-@bot.command(name='end', aliases=['done','dead','finish'],help='Finish train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
+@nuny.discord_utils.bot.command(name='end', aliases=['done','dead','finish'],help='Finish train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
 async def endtrain(ctx, world, time=None, legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
 
@@ -159,31 +160,12 @@ async def endtrain(ctx, world, time=None, legacy="0"):
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
-    if conf["sonar"]["enable"]==True:    
-        # statistics 
-        sel_stat="""
-    SELECT round(avg(players)),min(players),max(players) from hunt 
-    INNER JOIN hunts on hunts.id = hunt.huntid 
-    INNER JOIN worlds on worlds.id=hunt.worldid 
-    WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-45 minutes') AND players>10
-                """
+    if nuny.config.conf["sonar"]["enable"]==True:    
+        await scout_log(sonar_stats(world,l))
 
-        if l==0:
-            exp=5
-        else:
-            exp=4
-
-        nuny.db_utils.cursor.execute(sel_stat,(exp, world))
-        stats=nuny.db_utils.cursor.fetchall()[0]
-        s_avg=stats[0]
-        s_min=stats[1]
-        s_max=stats[2]
-        
-        await scout_log(f"Average participation on the train seemed to be at least {s_avg} players. (varied between {s_min}-{s_max})")
-
-@bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
+@nuny.discord_utils.bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
 async def getstatus(ctx, legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     
@@ -194,9 +176,9 @@ async def getstatus(ctx, legacy="0"):
     await ctx.send(msg)
     await ctx.message.add_reaction("✅")
 
-@bot.command(name="cstatus", aliases=['compactstatus','cstat','cs'],help='Get compact train status')
+@nuny.discord_utils.bot.command(name="cstatus", aliases=['compactstatus','cstat','cs'],help='Get compact train status')
 async def getstatus(ctx):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     
@@ -204,9 +186,9 @@ async def getstatus(ctx):
     await ctx.send(msg)
     await ctx.message.add_reaction("✅")
 
-@bot.command(name="advertise", aliases=['ad','shout','sh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). Additionally will set the server status to running.')
+@nuny.discord_utils.bot.command(name="advertise", aliases=['ad','shout','sh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). Additionally will set the server status to running.')
 async def advertise(ctx, world, start, legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
     username=ctx.message.author.display_name
@@ -243,7 +225,7 @@ async def advertise(ctx, world, start, legacy="0"):
         return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
 
     try:
-        res=await bot.wait_for("reaction_add", check=check,timeout=30)
+        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
         logging.debug("Timed out while waiting for reaction.")
         await msg1.delete()
@@ -270,9 +252,9 @@ async def advertise(ctx, world, start, legacy="0"):
     await msg1.delete()
     await ctx.message.add_reaction('✅')
 
-@bot.command(name="advmanual", aliases=['adm','mshout','msh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")')
+@nuny.discord_utils.bot.command(name="advmanual", aliases=['adm','mshout','msh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")')
 async def madvertise(ctx, message, legacy="0"):
-    if ctx.channel.id != conf["discord"]["channels"]["bot"]:
+    if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
     username=ctx.message.author.display_name
     await bot_log(f"{ctx.message.author.display_name}: {ctx.message.content}")
@@ -299,7 +281,7 @@ async def madvertise(ctx, message, legacy="0"):
         return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
 
     try:
-        res=await bot.wait_for("reaction_add", check=check,timeout=30)
+        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
         logging.debug ("Timed out while waiting for reaction.")
         await msg1.delete()

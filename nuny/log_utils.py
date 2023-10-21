@@ -1,6 +1,7 @@
 import logging
-import nuny.discord_utils
 import discord.errors
+
+import nuny.discord_utils
 
 async def bot_log(msg):
     """Send message on bot log channel."""

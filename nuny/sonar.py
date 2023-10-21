@@ -228,6 +228,27 @@ ORDER BY hunt.zoneid,hunt.instanceid
     msg+="```"
     return msg
         
+def sonar_stats(world,l):
+    # statistics 
+    sel_stat="""
+SELECT round(avg(players)),min(players),max(players) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-45 minutes') AND players>10
+            """
+
+    if l==0:
+        exp=5
+    else:
+        exp=4
+
+    nuny.db_utils.cursor.execute(sel_stat,(exp, world))
+    stats=nuny.db_utils.cursor.fetchall()[0]
+    s_avg=stats[0]
+    s_min=stats[1]
+    s_max=stats[2]
+    return f"Average participation on the train seemed to be at least {s_avg} players. (varied between {s_min}-{s_max})"                
+        
 @tasks.loop(count=None)
 async def websocketrunner():
     while True:
