@@ -806,7 +806,8 @@ async def madvertise(ctx, message, legacy="0"):
 
     await msg1.delete()
     await ctx.message.add_reaction('✅')
-    await scout_log("Please set the server running manually if needed.")
+    if stb!=1:
+        await scout_log("Please set the server running manually if needed.")
 
 @bot.event
 async def on_ready():
