@@ -9,34 +9,24 @@ import datetime
 from time import mktime
 import discord
 import logging
+import aiohttp
 
 from tabulate import tabulate
-
-from pprint import pprint
-
-from dotenv import load_dotenv
 
 from discord.ext import commands
 from discord.ext import tasks
 
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
 from google.oauth2 import service_account
-from apiclient import discovery
 
-from discord_webhook import DiscordWebhook,DiscordEmbed
-
-import time
 import json
-from urllib.request import urlopen,Request
 from websockets.client import connect
 import websockets.exceptions
-import httplib2
 import sqlite3
 import yaml
+
+discord.VoiceClient.warn_nacl=False
 
 with open('config.yaml','r') as file:
     conf=yaml.safe_load(file)
@@ -469,10 +459,14 @@ def parse_parameters(time,leg):
     return [time,l,stb]
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
 ready = 0
 
-bot = commands.Bot(command_prefix=".")
+intents=discord.Intents.default()
+intents.message_content=True
+
+bot = commands.Bot(command_prefix=".",intents=intents)
 
 @bot.command(name='speculate',help='Speculate about status of a certain world')
 async def spec(ctx,world,legacy="0"):
@@ -675,7 +669,7 @@ async def periodicstatus():
     msg=await update_from_sheets_to_chat(1)
     await bot_log(msg)
 
-def post_webhooks(msg, expansion):
+async def post_webhooks(msg, expansion):
     for w in conf["webhooks"]:
         wh=w["webhook"]
         r=w["roles"][expansion]
@@ -685,8 +679,9 @@ def post_webhooks(msg, expansion):
                 rtxt=f"<@&{r}> "                
             print(w["name"])
             msgtxt=f"{rtxt}{msg}"
-            webhook = DiscordWebhook(url=wh,rate_limit_retry=True,content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")
-            resp=webhook.execute()    
+            async with aiohttp.ClientSession() as session:
+                webhook=discord.Webhook.from_url(w["webhook"], session=session)
+                await webhook.send(content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")                        
 
 @bot.command(name="advertise", aliases=['ad','shout','sh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). Additionally will set the server status to running.')
 async def advertise(ctx, world, start, legacy="0"):
@@ -745,7 +740,7 @@ async def advertise(ctx, world, start, legacy="0"):
         expansion=4
      
     msg=f"**[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
-    post_webhooks(msg,expansion)
+    await post_webhooks(msg,expansion)
     
     time=parm[0]
     if stb==0: 
@@ -802,18 +797,12 @@ async def madvertise(ctx, message, legacy="0"):
         expansion=4
      
     msg=f"{message} (Conductor: {username})."
-    post_webhooks(msg,expansion)
+    await post_webhooks(msg,expansion)
 
     await msg1.delete()
     await ctx.message.add_reaction('✅')
     if stb!=1:
         await scout_log("Please set the server running manually if needed.")
-
-@bot.event
-async def on_ready():
-    global ready
-    print(f'{bot.user} has connected to Discord!')
-    ready=1
 
 @tasks.loop(seconds = 60)
 async def STLoop():
@@ -958,7 +947,6 @@ async def huntname(msg):
 
 @tasks.loop(count=None)
 async def websocketrunner():
-    await asyncio.sleep(15)
     while True:
         try:
             async with connect(conf["sonar"]["websocket"]) as websocket:
@@ -1064,10 +1052,19 @@ async def websocketrunner():
             print (f"Socket error: {errori}")
         await asyncio.sleep(30)
 
-SheetLoop.start()
-STLoop.start()
-StatusLoop.start()
-if conf["sonar"]["enable"]==True:
-    websocketrunner.start()
+@bot.event
+async def on_ready():
+    global ready
+    print(f'{bot.user} has connected to Discord!')
+    ready=1
+    SheetLoop.start()
+    STLoop.start()
+    StatusLoop.start()
+    if conf["sonar"]["enable"]==True:
+        websocketrunner.start()
 
-bot.run(conf["discord"]["token"])
+async def main():         
+    async with bot:
+        await bot.start(conf["discord"]["token"])
+
+asyncio.run(main())
