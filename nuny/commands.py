@@ -230,27 +230,27 @@ async def advertise(ctx, world, start, legacy="0"):
         logging.debug("Timed out while waiting for reaction.")
         await msg1.delete()
         await ctx.message.add_reaction('❌')
-        pass
+        
     else:
         if res:
             reaction, user=res
             logging.debug(reaction.emoji)
 
-    expansion=6
-    if l==1:
-        expansion=5
-    if stb==1:
-        expansion=4
-     
-    msg=f"**[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
-    await nuny.discord_utils.post_webhooks(msg,expansion)
-    
-    time=parm[0]
-    if stb==0: 
-        await update_sheet(world,"Running",time,l)
+            expansion=6
+            if l==1:
+                expansion=5
+            if stb==1:
+                expansion=4
+            
+            msg=f"**[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+            await nuny.discord_utils.post_webhooks(msg,expansion)
+            
+            time=parm[0]
+            if stb==0: 
+                await update_sheet(world,"Running",time,l)
 
-    await msg1.delete()
-    await ctx.message.add_reaction('✅')
+            await msg1.delete()
+            await ctx.message.add_reaction('✅')
 
 @nuny.discord_utils.bot.command(name="advmanual", aliases=['adm','mshout','msh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")')
 async def madvertise(ctx, message, legacy="0"):
@@ -292,16 +292,16 @@ async def madvertise(ctx, message, legacy="0"):
             reaction, user=res
             logging.debug (reaction.emoji)
 
-    expansion=6
-    if l==1:
-        expansion=5
-    if stb==1:
-        expansion=4
-     
-    msg=f"{message} (Conductor: {username})."
-    await nuny.discord_utils.post_webhooks(msg,expansion)
+            expansion=6
+            if l==1:
+                expansion=5
+            if stb==1:
+                expansion=4
+            
+            msg=f"{message} (Conductor: {username})."
+            await nuny.discord_utils.post_webhooks(msg,expansion)
 
-    await msg1.delete()
-    await ctx.message.add_reaction('✅')
-    if stb!=1:
-        await scout_log("Please set the server running manually if needed.")
+            await msg1.delete()
+            await ctx.message.add_reaction('✅')
+            if stb!=1:
+                await scout_log("Please set the server running manually if needed.")
