@@ -7,7 +7,7 @@ import nuny.discord_utils
 from nuny.sheet_utils import update_from_sheets_to_chat,update_from_sheets_to_compact_chat
 from nuny.sheet_utils import worldStatusLoc,worldTimeLoc,fetch_sheet,update_sheet,update_channel
 from nuny.log_utils import bot_log,scout_log
-from nuny.misc_utils import speculate,mapping,parse_parameters,parse_world,post_webhooks
+from nuny.misc_utils import speculate,mapping,parse_parameters,parse_world
 from nuny.sonar import sonar_stats
 
 @nuny.discord_utils.bot.command(name='speculate',help='Speculate about status of a certain world')
@@ -243,7 +243,7 @@ async def advertise(ctx, world, start, legacy="0"):
         expansion=4
      
     msg=f"**[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
-    await post_webhooks(msg,expansion)
+    await nuny.discord_utils.post_webhooks(msg,expansion)
     
     time=parm[0]
     if stb==0: 
@@ -299,7 +299,7 @@ async def madvertise(ctx, message, legacy="0"):
         expansion=4
      
     msg=f"{message} (Conductor: {username})."
-    await post_webhooks(msg,expansion)
+    await nuny.discord_utils.post_webhooks(msg,expansion)
 
     await msg1.delete()
     await ctx.message.add_reaction('✅')
