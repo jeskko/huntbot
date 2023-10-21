@@ -1,7 +1,6 @@
-from tabulate import tabulate
 import os,datetime
 import logging
-
+from tabulate import tabulate
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from google.oauth2 import service_account

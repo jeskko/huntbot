@@ -1,10 +1,10 @@
-from discord.ext import tasks
-from websockets.client import connect
 import websockets.exceptions
 import json
 import datetime
 import logging
 import asyncio
+from discord.ext import tasks
+from websockets.client import connect
 
 import nuny.config
 import nuny.db_utils
