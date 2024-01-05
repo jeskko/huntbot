@@ -186,7 +186,12 @@ async def getstatus(ctx):
     await ctx.send(msg)
     await ctx.message.add_reaction("✅")
 
-@nuny.discord_utils.bot.command(name="advertise", aliases=['ad','shout','sh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). Additionally will set the server status to running.')
+@nuny.discord_utils.bot.command(name="advertise", 
+                                aliases=['ad','shout','sh'],
+                                help='''Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). 
+                                        Additionally will set the server status to running.''',
+                                ignore_extra=False)
+
 async def advertise(ctx, world, start, legacy="0"):
     if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return
@@ -252,7 +257,12 @@ async def advertise(ctx, world, start, legacy="0"):
             await msg1.delete()
             await ctx.message.add_reaction('✅')
 
-@nuny.discord_utils.bot.command(name="advmanual", aliases=['adm','mshout','msh'],help='Advertise your train. Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")')
+@nuny.discord_utils.bot.command(name="advmanual", 
+                                aliases=['adm','mshout','msh'],
+                                help='''Advertise your train. 
+                                        Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")''',
+                                ignore_extra=False)
+
 async def madvertise(ctx, message, legacy="0"):
     if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
         return

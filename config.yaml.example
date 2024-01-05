@@ -1,148 +1,146 @@
 # bot-channel is for commands. special for s-rank snipe alerts
-
 discord:
-        token: XXX
-        channels:
-                log: 123
-                bot: 123
-                sonar: 123
-                special: 123
+  token: XXX
+  channels:
+    log: 123
+    bot: 123
+    sonar: 123
+    special: 123
 
 google:
-        spreadsheet: XXX
+  spreadsheet: XXX
 
 # sonar urls. If you don't have these, set enable to False.
-
 sonar:
-        enable:    True
-        websocket: XXX
-        bootstrap: XXX
-        asset:
-          world:   XXX
-          hunt:    XXX
-          zone:    XXX
-          region:  XXX
-          dc:      XXX
+  enable: true
+  websocket: XXX
+  bootstrap: XXX
+  asset:
+    world: XXX
+    hunt: XXX
+    zone: XXX
+    region: XXX
+    dc: XXX
 
 # role id 0 - no shout
 # role id 1 - no ping
 
 webhooks:
-        - name: test
-          webhook: xxx
-          roles:
-            6: 123
-            5: 123
-            4: 123
-            3: 123
-            2: 123
-        
+  - name: test
+    webhook: xxx
+    roles:
+      '6': 123
+      '5': 123
+      '4': 123
+      '3': 123
+      '2': 123
+
 worlds:
-        - name: Alpha
-          short: alpha
-          initial: a
-          6: 
-                channel: 123
-                time: C3
-                status: E3
-          5: 
-                channel: 123
-                time: C20
-                status: E20
-        - name: Lich
-          short: lich
-          initial: l
-          6: 
-                channel: 123
-                time: C4
-                status: E4
-          5: 
-                channel: 123
-                time: C21
-                status: E21
-        - name: Odin
-          short: odin
-          initial: o
-          6: 
-                channel: 123
-                time: C5
-                status: E5
-          5: 
-                channel: 123
-                time: C22
-                status: E22
-        - name: Phoenix
-          short: phoe
-          initial: p
-          6:
-                  channel: 123
-                  time: C6
-                  status: E6
-          5:
-                  channel: 123
-                  time: C23
-                  status: E23
-        - name: Raiden
-          short: raiden
-          initial: r
-          6: 
-                channel: 123
-                time: C7
-                status: E7
-          5: 
-                channel: 123
-                time: C24
-                status: E24
-        - name: Shiva
-          short: shiva
-          initial: s
-          6:
-                  channel: 123
-                  time: C8
-                  status: E8
-          5:
-                  channel: 123
-                  time: C25
-                  status: E25
-        - name: Twintania
-          short: twin
-          initial: t
-          6:
-                  channel: 123
-                  time: C9
-                  status: E9
-          5:
-                  channel: 123
-                  time: C26
-                  status: E26
-        - name: Zodiark
-          short: zodi
-          initial: z
-          6:
-                  channel: 123
-                  time: C10
-                  status: E10
-          5:
-                  channel: 123
-                  time: C27
-                  status: E27
+  - name: Alpha
+    short: alpha
+    initial: a
+    '6':
+      channel: 123
+      time: C3
+      status: E3
+    '5':
+      channel: 123
+      time: C20
+      status: E20
+  - name: Lich
+    short: lich
+    initial: l
+    '6':
+      channel: 123
+      time: C4
+      status: E4
+    '5':
+      channel: 123
+      time: C21
+      status: E21
+  - name: Odin
+    short: odin
+    initial: o
+    '6':
+      channel: 123
+      time: C5
+      status: E5
+    '5':
+      channel: 123
+      time: C22
+      status: E22
+  - name: Phoenix
+    short: phoe
+    initial: p
+    '6':
+      channel: 123
+      time: C6
+      status: E6
+    '5':
+      channel: 123
+      time: C23
+      status: E23
+  - name: Raiden
+    short: raiden
+    initial: r
+    '6':
+      channel: 123
+      time: C7
+      status: E7
+    '5':
+      channel: 123
+      time: C24
+      status: E24
+  - name: Shiva
+    short: shiva
+    initial: s
+    '6':
+      channel: 123
+      time: C8
+      status: E8
+    '5':
+      channel: 123
+      time: C25
+      status: E25
+  - name: Twintania
+    short: twin
+    initial: t
+    '6':
+      channel: 123
+      time: C9
+      status: E9
+    '5':
+      channel: 123
+      time: C26
+      status: E26
+  - name: Zodiark
+    short: zodi
+    initial: z
+    '6':
+      channel: 123
+      time: C10
+      status: E10
+    '5':
+      channel: 123
+      time: C27
+      status: E27
 
 statuses:
-        - name: Up
-          short: up
-          icon: ✅
-        - name: Scouting
-          short: scouting
-          icon: 📡
-        - name: Scouted
-          short: scouted
-          icon: 🌐
-        - name: Running
-          short: run
-          icon: 🚋
-        - name: Dead
-          short: dead
-          icon: 🔒
-        - name: Sniped
-          short: sniped
-          icon: 🏹
+  - name: Up
+    short: up
+    icon: ✅
+  - name: Scouting
+    short: scouting
+    icon: 📡
+  - name: Scouted
+    short: scouted
+    icon: 🌐
+  - name: Running
+    short: run
+    icon: 🚋
+  - name: Dead
+    short: dead
+    icon: 🔒
+  - name: Sniped
+    short: sniped
+    icon: 🏹

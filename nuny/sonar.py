@@ -10,6 +10,25 @@ import nuny.config
 import nuny.db_utils
 from nuny.log_utils import sonar_log,scout_log,spec_log
 
+worldidlist = None
+huntidlist = None
+huntidlist_nuts = None
+huntidlist_s = None
+check="""SELECT 
+            key, huntid, worldid, 
+            zoneid, instanceid, players, 
+            currenthp, maxhp, lastseen, 
+            lastfound, lastkilled, lastupdated, 
+            lastuntouched,actorid,status,x,y
+            FROM 'hunt' WHERE key = ?"""
+ins="""INSERT OR REPLACE INTO 'hunt' (
+            key, huntid, worldid, 
+            zoneid, instanceid, players, 
+            currenthp, maxhp, lastseen, 
+            lastfound, lastkilled, lastupdated, 
+            lastuntouched,actorid,status,x,y) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+
 def relay_to_sql(msg,status):
     return (msg['Relay']['Key'],
        msg['Relay']['Id'],
@@ -129,64 +148,51 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > date
 
     return f"\nSonar data suggests that {alive} marks are alive, {spawned} marks should have spawned, {despawn} marks might have already despawned, {spawning} marks have potential to spawn and {dead} marks are dead."
 
+def init_sonar():
+    global worldidlist, huntidlist, huntidlist_nuts, huntidlist_s
+    if nuny.config.conf["sonar"]["enable"]==True:
 
-if nuny.config.conf["sonar"]["enable"]==True:
-
-    # sonar stuff init
+        # sonar stuff init
 
 
-    # we're interested in light dc
+        # we're interested in light dc
 
-    dc=("Light",)
-    sel="SELECT worlds.id from worlds INNER JOIN dcs ON worlds.datacenterid = dcs.id WHERE dcs.name = ?"
-    nuny.db_utils.cursor.execute(sel,dc)
-    r=nuny.db_utils.cursor.fetchall()
+        dc=("Light",)
+        sel="SELECT worlds.id from worlds INNER JOIN dcs ON worlds.datacenterid = dcs.id WHERE dcs.name = ?"
+        nuny.db_utils.cursor.execute(sel,dc)
+        r=nuny.db_utils.cursor.fetchall()
 
-    worldidlist=[]
-    for w in r:
-        worldidlist.append(w[0])
+        worldidlist=[]
+        for w in r:
+            worldidlist.append(w[0])
 
-    # we're interested in A-rank hunts
+        # we're interested in A-rank hunts
 
-    nuny.db_utils.cursor.execute('SELECT id from hunts WHERE rank=2')
-    r=nuny.db_utils.cursor.fetchall()
+        nuny.db_utils.cursor.execute('SELECT id from hunts WHERE rank=2')
+        r=nuny.db_utils.cursor.fetchall()
 
-    huntidlist=[]
-    for h in r:
-        huntidlist.append(h[0])
+        huntidlist=[]
+        for h in r:
+            huntidlist.append(h[0])
 
-    # SHB+ A-rank hunts for snipe notifications
+        # SHB+ A-rank hunts for snipe notifications
 
-    nuny.db_utils.cursor.execute('SELECT id from hunts WHERE rank=2 AND expansion>=4')
-    r=nuny.db_utils.cursor.fetchall()
+        nuny.db_utils.cursor.execute('SELECT id from hunts WHERE rank=2 AND expansion>=4')
+        r=nuny.db_utils.cursor.fetchall()
 
-    huntidlist_nuts=[]
-    for h in r:
-        huntidlist_nuts.append(h[0])
+        huntidlist_nuts=[]
+        for h in r:
+            huntidlist_nuts.append(h[0])
 
-    # S-rank list for special purposes
+        # S-rank list for special purposes
 
-    nuny.db_utils.cursor.execute('SELECT id from hunts WHERE rank=3')
-    r=nuny.db_utils.cursor.fetchall()
+        nuny.db_utils.cursor.execute('SELECT id from hunts WHERE rank=3')
+        r=nuny.db_utils.cursor.fetchall()
 
-    huntidlist_s=[]
-    for h in r:
-        huntidlist_s.append(h[0])
+        huntidlist_s=[]
+        for h in r:
+            huntidlist_s.append(h[0])
 
-    check="""SELECT 
-        key, huntid, worldid, 
-        zoneid, instanceid, players, 
-        currenthp, maxhp, lastseen, 
-        lastfound, lastkilled, lastupdated, 
-        lastuntouched,actorid,status,x,y
-        FROM 'hunt' WHERE key = ?"""
-    ins="""INSERT OR REPLACE INTO 'hunt' (
-        key, huntid, worldid, 
-        zoneid, instanceid, players, 
-        currenthp, maxhp, lastseen, 
-        lastfound, lastkilled, lastupdated, 
-        lastuntouched,actorid,status,x,y) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
 
 def sonar_mapping(w,legacy):
     l=0
