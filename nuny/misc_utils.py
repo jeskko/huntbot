@@ -165,3 +165,10 @@ async def periodicstatus():
     msg=await update_from_sheets_to_chat(1)
     await bot_log(msg)
 
+async def update_messages():
+    """Update status messages on different world channels."""
+    for legacy in [" ","l"]:
+        for world in nuny.config.conf["worlds"]:
+            name=world["name"]
+            msg=speculate(name,legacy)+"\n\n"+mapping(name,legacy)
+            await nuny.discord_utils.update_message(name,legacy,msg)
