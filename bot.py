@@ -10,7 +10,9 @@ from discord.ext import tasks
 
 import nuny.config
 import nuny.discord_utils
-from nuny.misc_utils import periodicstatus
+import nuny.state
+
+from nuny.misc_utils import periodicstatus, update_messages
 from nuny.sheet_utils import update_from_sheets
 from nuny.sonar import websocketrunner
 
@@ -35,18 +37,19 @@ async def StatusLoop():
 @tasks.loop(seconds = 300)
 async def SheetLoop():
     await update_from_sheets()
+    await update_messages()
 
 @nuny.discord_utils.bot.event
 async def on_ready():
     logging.info(f'{nuny.discord_utils.bot.user} has connected to Discord!')
+    await nuny.discord_utils.check_messages()
     SheetLoop.start()
     STLoop.start()
-    StatusLoop.start()
+    StatusLoop.start() 
     if nuny.config.conf["sonar"]["enable"]==True:
         websocketrunner.start()
 
 async def main():
-    nuny.config.load_conf()
     nuny.sonar.init_sonar()
     async with nuny.discord_utils.bot:
         await nuny.discord_utils.bot.start(nuny.config.conf["discord"]["token"])

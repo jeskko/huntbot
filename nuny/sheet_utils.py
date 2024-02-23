@@ -5,7 +5,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 
-import nuny.config
+import nuny.config, nuny.discord_utils
 
 def worldTimeLoc(world,leg=None):
     """

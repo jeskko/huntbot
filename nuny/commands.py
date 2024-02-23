@@ -112,7 +112,6 @@ async def scoutend(ctx, world, time=None, legacy="0"):
     else:
         await ctx.message.add_reaction("❓")
 
-
 @nuny.discord_utils.bot.command(name='start', aliases=['begin','run','go'],help='Start train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
 async def begintrain(ctx, world, time=None, legacy="0"):
     if ctx.channel.id != nuny.config.conf["discord"]["channels"]["bot"]:
@@ -136,7 +135,6 @@ async def begintrain(ctx, world, time=None, legacy="0"):
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
-
 
 @nuny.discord_utils.bot.command(name='end', aliases=['done','dead','finish'],help='Finish train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
 async def endtrain(ctx, world, time=None, legacy="0"):
