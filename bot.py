@@ -36,8 +36,13 @@ async def StatusLoop():
 
 @tasks.loop(seconds = 300)
 async def SheetLoop():
-    await update_from_sheets()
-    await update_messages()
+    try:
+        await update_from_sheets()
+        await update_messages()
+    except Exception as e:
+        logging.error(f'SheetLoop error: {e}')
+        pass
+    
 
 @nuny.discord_utils.bot.event
 async def on_ready():
