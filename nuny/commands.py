@@ -239,6 +239,10 @@ async def advertise(ctx, world, start, legacy="0"):
             reaction, user=res
             logging.debug(reaction.emoji)
 
+            for i in nuny.discord_utils.bot.guilds:
+                emoji=nuny.discord_utils.discord.utils.get(i.emojis, name="doggospin")
+            await msg1.add_reaction(emoji)
+
             expansion=6
             if l==1:
                 expansion=5
@@ -299,6 +303,10 @@ async def madvertise(ctx, message, legacy="0"):
         if res:
             reaction, user=res
             logging.debug (reaction.emoji)
+
+            for i in nuny.discord_utils.bot.guilds:
+                emoji=nuny.discord_utils.discord.utils.get(i.emojis, name="doggospin")
+            await msg1.add_reaction(emoji)
 
             expansion=6
             if l==1:
