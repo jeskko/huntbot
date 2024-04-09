@@ -84,7 +84,6 @@ async def scoutcancel(ctx, world, time=None, legacy="0"):
         else:
             time=0
         await update_sheet(world,status,time,l)
-        await update_channel(world,status,l)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
