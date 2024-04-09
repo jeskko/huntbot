@@ -5,6 +5,7 @@ from discord.ext import commands
 
 import nuny.config
 import nuny.state
+from nuny.log_utils import bot_log
 
 discord.VoiceClient.warn_nacl=False
 
@@ -32,6 +33,7 @@ bot.on_command_error=on_command_error
 async def post_webhooks(msg, expansion):
     """Send a message using webhook to multiple Discord servers."""
     logging.debug("post_webhooks start")
+    await bot_log("post_webhooks start")
     for w in nuny.config.conf["webhooks"]:
         wh=w["webhook"]
         r=w["roles"][expansion]
@@ -40,6 +42,7 @@ async def post_webhooks(msg, expansion):
             if r>1:
                 rtxt=f"<@&{r}> "                
             logging.debug(f'Sending to {w["name"]}')
+            await bot_log(f'Sending to {w["name"]}')
             msgtxt=f"{rtxt}{msg}"
             async with aiohttp.ClientSession() as session:
                 webhook=discord.Webhook.from_url(w["webhook"], session=session)
@@ -47,7 +50,9 @@ async def post_webhooks(msg, expansion):
                     await webhook.send(content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")                        
                 except (discord.errors.HTTPException,discord.errors.NotFound) as e:
                     logging.error(f'Unable to send message to {w["name"]}: {e}')
+                    bot_log(f'Unable to send message to {w["name"]}: {e}')
                     pass
+    await bot_log("post_webnhooks end")
                 
 async def check_messages():
     """Verify that status messages exist on every server channel and make new ones if needed."""

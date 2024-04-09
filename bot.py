@@ -20,6 +20,7 @@ import nuny.commands
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
+logging.getLogger('websockets.client').setLevel(logging.INFO)
 
 @tasks.loop(seconds = 60)
 async def STLoop():
