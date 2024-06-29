@@ -127,10 +127,10 @@ async def update_from_sheets_to_chat(legacy=None):
     """Fetch status from backend sheet and make a status summary."""
     
     range = 'Up Times!B3:E10'
-    message="Endwalker status\n```"
+    message="Dawntrail status\n```"
     if legacy==1:
         range = 'Up Times!B20:E27'
-        message="Shadowbringers status\n```"
+        message="Endwalker status\n```"
     
     values=fetch_sheet(range)
 
@@ -167,7 +167,7 @@ async def update_from_sheets_to_compact_chat(legacy=None):
         logging.error('No data found from fetch_sheet.')
     else:
         taulu=[]
-        taulu.append(["Server","EW","SHB"])
+        taulu.append(["Server","DT","EW"])
         for row in values:
             taulu.append([row[0],row[1],row[2]])
     message="```"+tabulate(taulu,headers="firstrow",tablefmt="fancy_grid")+"```"

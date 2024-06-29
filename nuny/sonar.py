@@ -75,11 +75,16 @@ async def huntname(msg):
                 2: 'HW',
                 3: 'STB',
                 4: 'SHB',
-                5: 'EW'}
+                5: 'EW',
+                6: 'DT'}
     instances={0: '',
                1: ' (1)',
                2: ' (2)',
-               3: ' (3)'}
+               3: ' (3)',
+               4: ' (4)',
+               5: ' (5)',
+               6: ' (6)'
+               }
     sel="SELECT name,expansion FROM hunts WHERE id = ?"
     h=nuny.db_utils.cursor.execute(sel,(msg["Relay"]["Id"],)).fetchone()
     sel="SELECT name FROM worlds WHERE id = ?"
@@ -127,9 +132,9 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > date
         """
 
     if l==0:
-        exp=5
+        exp=6
     else:
-        exp=4
+        exp=5
 
     nuny.db_utils.cursor.execute(sel_alive,(exp, w))
     alive=nuny.db_utils.cursor.fetchall()[0][0]
@@ -202,19 +207,28 @@ def sonar_mapping(w,legacy):
         l_text=" (legacy) "
 
     if l==0:
-        exp=5
+        exp=6
     else:
-        exp=4
+        exp=5
     
     ishort={0: '',
             1: '',
             2: '',
-            3: ''}
+            3: '',
+            4: '',
+            5: '',
+            6: ''            
+            }
     
     ilong={0: '',
         1: '  (Instance ONE)',
         2: '  (Instance TWO)',
-        3: '  (Instance THREE)'}
+        3: '  (Instance THREE)',
+        4: '  (Instance FOUR)',
+        5: '  (Instance FIVE)',
+        6: '  (Instance SIX)'
+                        
+    }
     
     sel="""
 SELECT hunts.name, zones.name,hunt.instanceid, 
@@ -244,9 +258,9 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND l
             """
 
     if l==0:
-        exp=5
+        exp=6
     else:
-        exp=4
+        exp=5
 
     nuny.db_utils.cursor.execute(sel_stat,(exp, world))
     stats=nuny.db_utils.cursor.fetchall()[0]

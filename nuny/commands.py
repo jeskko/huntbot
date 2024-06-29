@@ -214,11 +214,11 @@ async def advertise(ctx, world, start, legacy="0"):
     l=parm[1]
     stb=parm[2]
     if l==0:
-        msg=f"About to send this notification to various servers: ```@Endwalker_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Dawntrail_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to various servers: ```@Shadowbringers_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Endwalker_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
     if stb==1:
-        msg=f"About to send this notification to various servers: ```@Stormblood_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Shadowbringers_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
  
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -279,11 +279,11 @@ async def madvertise(ctx, message, legacy="0"):
     l=parm[1]
     stb=parm[2]
     if l==0:
-        msg=f"About to send this notification to various servers: ```@Endwalker_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Dawntrail_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
     if l==1:
-        msg=f"About to send this notification to various servers: ```@Shadowbringers_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Endwalker_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
     if stb==1:
-        msg=f"About to send this notification to various servers: ```@Stormblood_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Shadowbringers_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
 
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")

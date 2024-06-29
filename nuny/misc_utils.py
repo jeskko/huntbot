@@ -130,12 +130,12 @@ def parse_parameters(time,leg):
         if time==None:
             time=datetime.datetime.utcnow()
         else:
-            if time[0].capitalize()=="L" or time[0]=="5":
+            if time[0].capitalize()=="L" or time[0]=="6":
                 leg="L"
                 time=datetime.datetime.utcnow()
             else:
-                if time[0]=="4":
-                    leg="4"
+                if time[0]=="5":
+                    leg="5"
                 else:
                     if time[0]=="+":
                         time=datetime.timedelta(minutes=int(time[1:]))+datetime.datetime.utcnow()
@@ -147,15 +147,15 @@ def parse_parameters(time,leg):
     except ValueError:
         time=datetime.datetime.utcnow()
     l=0
-    stb=0
+    shb=0
     if leg[0].capitalize()=="L":
         l=1
+    if leg[0]=="6":
+        l=1
     if leg[0]=="5":
+        shb=1
         l=1
-    if leg[0]=="4":
-        stb=1
-        l=1
-    return [time,l,stb]        
+    return [time,l,shb]        
 
 async def periodicstatus():
     """Get statuses for different servers and log them on bot log channel. This is run from StatusLoop every 5 minutes."""
