@@ -7,3 +7,4 @@ hunt.db
 *.json
 __pycache__
 .idea/
+bot.log
