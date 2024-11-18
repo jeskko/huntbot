@@ -75,11 +75,15 @@ async def huntname(msg):
                 2: 'HW',
                 3: 'STB',
                 4: 'SHB',
-                5: 'EW'}
+                5: 'EW',
+                6: 'DT'}
     instances={0: '',
                1: ' (1)',
                2: ' (2)',
-               3: ' (3)'}
+               3: ' (3)',
+               4: ' (4)',
+               5: ' (5)',
+               6: ' (6)'}
     sel="SELECT name,expansion FROM hunts WHERE id = ?"
     h=nuny.db_utils.cursor.execute(sel,(msg["Relay"]["Id"],)).fetchone()
     sel="SELECT name FROM worlds WHERE id = ?"
@@ -89,7 +93,7 @@ async def huntname(msg):
              'name': h[0],
              'instance': instances[int(msg["Relay"]["InstanceId"])]})
 
-def sonar_speculate(w,l):
+def sonar_speculate(w,exp):
     # marks probably despawned, last 18 hours
     sel_despawn="""
 SELECT count(*) from hunt 
@@ -126,11 +130,8 @@ INNER JOIN worlds on worlds.id=hunt.worldid
 WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-4 hours') AND currenthp=0
         """
 
-    if l==0:
-        exp=5
-    else:
-        exp=4
-
+    exp=exp-1
+    
     nuny.db_utils.cursor.execute(sel_alive,(exp, w))
     alive=nuny.db_utils.cursor.fetchall()[0][0]
 
@@ -194,27 +195,30 @@ def init_sonar():
             huntidlist_s.append(h[0])
 
 
-def sonar_mapping(w,legacy):
-    l=0
-    l_text=""
-    if legacy[0].capitalize()=="L":
-        l=1
-        l_text=" (legacy) "
-
-    if l==0:
-        exp=5
-    else:
-        exp=4
+def sonar_mapping(w,expansion=7):
+    try:
+        exp=int(expansion)
+    except:
+        raise ValueError("Invalid non-numeric expansion")
+    if (exp<2 or exp>7):
+                raise ValueError("Invalid expansion")
+    
     
     ishort={0: '',
             1: '',
             2: '',
-            3: ''}
+            3: '',
+            4: '',
+            5: '',
+            6: ''}
     
     ilong={0: '',
         1: '  (Instance ONE)',
         2: '  (Instance TWO)',
-        3: '  (Instance THREE)'}
+        3: '  (Instance THREE)',
+        4: '  (Instance FOUR)',
+        5: '  (Instance FIVE)',
+        6: '  (Instance SIX)'}
     
     sel="""
 SELECT hunts.name, zones.name,hunt.instanceid, 
@@ -226,7 +230,7 @@ INNER JOIN zones on zones.id=hunt.zoneid
 WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastseen > datetime('now','-20 hours') AND lastfound > datetime('now','-20 hours') AND currenthp != 0
 ORDER BY hunt.zoneid,hunt.instanceid
         """
-    nuny.db_utils.cursor.execute(sel,(exp,w))
+    nuny.db_utils.cursor.execute(sel,(exp-1,w))
     h=nuny.db_utils.cursor.fetchall()
     msg="Sonar data suggests following mapping:\n```\n"
     for l in h:

@@ -7,38 +7,6 @@ from google.oauth2 import service_account
 
 import nuny.config, nuny.discord_utils
 
-def worldTimeLoc(world,leg=None):
-    """
-    Find the sheet cell location for time value for a certain world.
-    leg==1 means SHB, otherwise EW.
-    """
-    
-    if leg==1:
-        l=5
-    else:
-        l=6
-    try: 
-        w=[w for w in nuny.config.conf["worlds"] if w["name"]==world][0]
-    except IndexError:
-        raise ValueError("Invalid world")
-    return w[l]["time"]
-
-def worldStatusLoc(world,leg=None):
-    """
-    Find the sheet cell location for status value for a certain world.
-    leg==1 means SHB, otherwise EW.    
-    """
-    
-    if leg==1:
-        l=5
-    else:
-        l=6
-    try: 
-        w=[w for w in nuny.config.conf["worlds"] if w["name"]==world][0]
-    except IndexError:
-        raise ValueError("Invalid world")
-    return w[l]["status"]
-
 async def update_sheet(world, status, time, legacy=None):
     """Update the backend sheet."""
     
@@ -101,27 +69,6 @@ def fetch_sheet(range):
         return 0
     return result.get('values', [])
 
-async def update_from_sheets():
-    """Fetch data from backend sheet and update channel names."""
-    
-    EW_RANGE = 'Up Times!B3:E10'
-    LEGACY_RANGE = 'Up Times!B20:E27'
-
-    values=fetch_sheet(EW_RANGE)
-
-    if not values:
-        logging.error('No data found from fetch_sheet.')
-    else:
-        for row in values:
-            await update_channel(row[0],row[3],0)
-
-    values=fetch_sheet(LEGACY_RANGE)
-
-    if not values:
-        logging.error('No data found from fetch_sheet.')
-    else:
-        for row in values:
-            await update_channel(row[0],row[3],1)
 
 async def update_from_sheets_to_chat(legacy=None):
     """Fetch status from backend sheet and make a status summary."""
@@ -173,27 +120,3 @@ async def update_from_sheets_to_compact_chat(legacy=None):
     message="```"+tabulate(taulu,headers="firstrow",tablefmt="fancy_grid")+"```"
     return message
 
-async def update_channel(world, status, legacy=None):
-    """Update channel name value. Will check if actual update is necessary to avoid rate limiting."""
-    
-    if legacy==1:
-        l=5
-    else:
-        l=6
-    try:
-        w=[w for w in nuny.config.conf["worlds"] if w["name"]==world][0]
-    except IndexError:
-        raise ValueError("Invalid world")
-    try:
-        st=[st for st in nuny.config.conf["statuses"] if st["name"]==status][0]
-    except IndexError:
-        raise ValueError("Invalid world status")
-    chanid=w[l]["channel"]
-    newname=f'{st["icon"]}{w["short"]}-{st["short"]}'
-     
-    chan=nuny.discord_utils.bot.get_channel(chanid)
-    if chan.name != newname:
-        logging.debug(f"Updating channel name from {chan.name} to {newname}.")
-        await chan.edit(name=newname)
-    else:
-        logging.debug("no need to update channel name.")
