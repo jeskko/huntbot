@@ -6,7 +6,7 @@ import nuny.db_utils
 import nuny.discord_utils
 
 from nuny.log_utils import bot_log,scout_log
-from nuny.misc_utils import speculate,mapping,parse_parameters,parse_world,set_status,get_status
+from nuny.misc_utils import speculate,mapping,parse_parameters,parse_world,set_status,get_statuses,get_history
 from nuny.sonar import sonar_stats
 
 async def log_cmd(ctx):
@@ -14,6 +14,8 @@ async def log_cmd(ctx):
 
 @nuny.discord_utils.bot.command(name='speculate',help='Speculate about status of a certain world')
 async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
     await log_cmd(ctx)
     
     msg=speculate(world,expansion)
@@ -21,6 +23,9 @@ async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
 
 @nuny.discord_utils.bot.command(name='mapping', aliases=["map",], help='Check mapping data from Sonar')
 async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
 
     msg=mapping(world, expansion)
@@ -29,6 +34,9 @@ async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
 
 @nuny.discord_utils.bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.')
 async def scouting(ctx, world, expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
  
     try:
@@ -38,14 +46,17 @@ async def scouting(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid world.")
         return()
     
-    if expansion in range(5,7):
-        await set_status(world,"Scouting",expansion)
+    if expansion in range(5,8):
+        set_status(world,"Scouting",expansion)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
 
 @nuny.discord_utils.bot.command(name='scoutcancel', aliases=['cancel', 'sccancel', 'scc'], help="Cancel scouting. Return server to up status.")
 async def scoutcancel(ctx, world, expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
  
     try:
@@ -55,14 +66,17 @@ async def scoutcancel(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid world.")
         return()
 
-    if expansion in range(5,7):
-        await set_status(world,"Up",expansion)
+    if expansion in range(5,8):
+        set_status(world,"Up",expansion)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
 
 @nuny.discord_utils.bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.')
 async def scoutend(ctx, world, expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
  
     try:
@@ -72,14 +86,17 @@ async def scoutend(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid world.")
         return()
 
-    if expansion in range(5,7):
-        await set_status(world,"Scouted",expansion)
+    if expansion in range(5,8):
+        set_status(world,"Scouted",expansion)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
 
 @nuny.discord_utils.bot.command(name='start', aliases=['begin','run','go'],help='Start train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
 async def begintrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
  
     try:
@@ -89,14 +106,17 @@ async def begintrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"
         await ctx.send("Invalid world.")
         return()
 
-    if expansion in range(5,7):
-        await set_status(world,"Running")
+    if expansion in range(5,8):
+        set_status(world,"Running",time)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
 
 @nuny.discord_utils.bot.command(name='end', aliases=['done','dead','finish'],help='Finish train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
-async def endtrain(ctx, world, expansion=nuny.config.conf["def_exp"]):
+async def endtrain(ctx, world, time=None,expansion=int(nuny.config.conf["def_exp"])):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
  
     try:
@@ -106,26 +126,66 @@ async def endtrain(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid world.")
         return()
 
-    if expansion in range(5,7):
-        await set_status(world,"Dead",expansion)
-        nuny.db_utils.update_timer(world,expansion,"now")
+    if expansion in range(5,8):
+        set_status(world,"Dead",expansion,time)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
+        await ctx.send(f"Invalid or non-tracked expansion.")
 
     if nuny.config.conf["sonar"]["enable"]==True:    
         await scout_log(sonar_stats(world,expansion))
 
 @nuny.discord_utils.bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
 async def getstatus(ctx, expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
     
-    if expansion in range(5,7):
-        msg=get_status(expansion)
+    if expansion in range(5,8):
+        msg=get_statuses(expansion)
         await ctx.send(msg)
         await ctx.message.add_reaction("✅")
     else:
         await ctx.message.add_reaction("❓")
+
+@nuny.discord_utils.bot.command(name="history", aliases=['hist'],help='Get status history')
+async def gethistory(ctx, world, expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+    await log_cmd(ctx)
+
+    try:
+        world=parse_world(world)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid world.")
+        return()
+    
+    if expansion in range(5,8):
+        msg=get_history(world,expansion)
+        await ctx.send(msg)
+        await ctx.message.add_reaction("✅")
+    else:
+        await ctx.message.add_reaction("❓")
+
+@nuny.discord_utils.bot.command(name="undo",help="Undo a previous status.")
+async def undo(ctx,id):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
+    await log_cmd(ctx)
+
+    try:
+        id=int(id)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid ID.")
+        return()
+
+    nuny.db_utils.delstatus(id)
+    await ctx.message.add_reaction("✅")
 
 @nuny.discord_utils.bot.command(name="advertise", 
                                 aliases=['ad','shout','sh'],
@@ -133,6 +193,9 @@ async def getstatus(ctx, expansion=nuny.config.conf["def_exp"]):
                                         Additionally will set the server status to running.''',
                                 ignore_extra=False)
 async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
  
     username=ctx.message.author.display_name
@@ -153,15 +216,19 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
         return()
 
     parm=parse_parameters(None,expansion)
-    l=parm[1]
-    stb=parm[2]
-    if l==0:
+    expansion=parm[1]
+
+    if expansion==7:
+        msg=f"About to send this notification to various servers: ```@Dawntrail_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+    if expansion==6:
         msg=f"About to send this notification to various servers: ```@Endwalker_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
-    if l==1:
+    if expansion==5:
         msg=f"About to send this notification to various servers: ```@Shadowbringers_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
-    if stb==1:
-        msg=f"About to send this notification to various servers: ```@Stormblood_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
- 
+    if expansion in range(2,5):
+        msg=f"About to send this notification to various servers: ```@Old_train_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
+
+    ### tähän virheenkäsittely jos annetaan huono expansion    
+        
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
 
@@ -183,19 +250,12 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
             for i in nuny.discord_utils.bot.guilds:
                 emoji=nuny.discord_utils.discord.utils.get(i.emojis, name="doggospin")
             await msg1.add_reaction(emoji)
-
-            expansion=6
-            if l==1:
-                expansion=5
-            if stb==1:
-                expansion=4
             
             msg=f"**[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
             await nuny.discord_utils.post_webhooks(msg,expansion)
             
-            time=parm[0]
-            if stb==0: 
-                await nuny.db.setstatus(world,expansion,"Running")
+            if expansion in range(5,8):
+                set_status(world,"Running",expansion)
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
@@ -207,6 +267,9 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
                                 ignore_extra=False)
 
 async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
     await log_cmd(ctx)
  
     username=ctx.message.author.display_name

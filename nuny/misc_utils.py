@@ -1,18 +1,54 @@
 import datetime
 import logging
-import nuny.config
+from tabulate import tabulate
 
+
+import nuny.config
 import nuny.discord_utils
 import nuny.db_utils
+
 
 from nuny.sonar import sonar_speculate,sonar_mapping
 from nuny.log_utils import bot_log
 
-def set_status(world,status,expansion,time):
+def set_status(world,status,expansion,time=None):
+    time,expansion=parse_parameters(time,expansion)
+    nuny.db_utils.setstatus(world,expansion,status,time)
     return
 
-def get_status(world,expansion):
-    return
+def get_statuses(expansion):
+    message=f"{expansion}.0 status:\n```"
+    table=[]
+    table.append(["Server","Status\nchanged","Status\nduration","Status"])
+    for w in nuny.config.conf["worlds"]:
+        (status,time)=nuny.db_utils.getstatus(w["name"],expansion)
+        if status=="Unknown":
+            t1=""
+        else:
+            t1=datetime.datetime.strftime(time,"%d.%m %H:%M")
+        t2_td=datetime.datetime.utcnow()-time
+        t2_h=int(divmod(t2_td.total_seconds(),3600)[0])
+        t2_m=int(divmod(divmod(t2_td.total_seconds(),3600)[1],60)[0])
+        if t2_h<0:
+            t2=""
+        else:
+            if t2_h>168:
+                t2=""                
+            else:
+                t2=f"{t2_h}:{t2_m:02d}"
+        
+        table.append([w["name"],t1,t2,status])
+    message+=tabulate(table,headers="firstrow",tablefmt="fancy_grid")+"```"        
+    return message
+
+def get_history(world,expansion):
+    message=f"Last statuses for {world} {expansion}.0:\n```"
+    table=[]
+    table.append(["Id","Status","Timestamp"])
+    for r in nuny.db_utils.gethistory(world,expansion):
+        table.append(r)
+    message+=tabulate(table,headers="firstrow",tablefmt="fancy_grid")+"```"        
+    return message
 
 def parse_world(world):
     """
@@ -21,7 +57,7 @@ def parse_world(world):
     """
     
     wl=world.lower()
-    w=[w for w in nuny.config.conf["channels"]["worlds"] if w["name"].lower()[0:len(wl)]==wl]
+    w=[w for w in nuny.config.conf["worlds"] if w["name"].lower()[0:len(wl)]==wl]
     try:
         name=w[0]["name"]
     except IndexError:
@@ -130,8 +166,9 @@ def parse_parameters(time,expansion):
     """
     if time==None:
             time=datetime.datetime.utcnow()
+            exp=nuny.config.conf["def_exp"]
     else:
-        if time.len()==1:
+        if len(time)==1:
             try: 
                 exp=int(time)
             except:
@@ -141,10 +178,16 @@ def parse_parameters(time,expansion):
                 if time[0]=="+":
                     time=datetime.timedelta(minutes=int(time[1:]))+datetime.datetime.utcnow()
                 else:
-                    t=time.split(":")
-                    h=int(t[0])
-                    m=int(t[1])
-                    time=datetime.datetime.utcnow().replace(hour=h,minute=m,second=45)
+                    if time[0]=="-":
+                        time=datetime.timedelta(minutes=-int(time[1:]))+datetime.datetime.utcnow()     
+                    else:              
+                        t=time.split(":")
+                        if len(t)==2:
+                            h=int(t[0])
+                            m=int(t[1])
+                            time=datetime.datetime.utcnow().replace(hour=h,minute=m,second=45)
+                        else:
+                            raise ValueError("Invalid time value")
             except ValueError:
                 raise ValueError("Invalid time value")
             try:
@@ -153,20 +196,23 @@ def parse_parameters(time,expansion):
                 raise ValueError("Invalid non-numeric expansion")
             if (exp<2 or exp>7):
                 raise ValueError("Invalid expansion")
-    return [time,exp]        
+    return (time,exp) 
 
 async def periodicstatus():
     """Get statuses for different servers and log them on bot log channel. This is run from StatusLoop every 5 minutes."""
     
-    msg="DT statusviesti tähän"
+    msg=get_statuses(7)
     await bot_log(msg)
-    msg="EW statusviesti tähän"
+    msg=get_statuses(6)
     await bot_log(msg)
+    msg=get_statuses(5)
+    await bot_log(msg)
+    
 
 async def update_messages():
     """Update status messages on different world channels."""
     for expansion in [5,6,7]:
-        for world in nuny.config.conf["channels"]["worlds"]:
+        for world in nuny.config.conf["worlds"]:
             name=world["name"]
             msg=speculate(name,expansion)+"\n\n"+mapping(name,expansion)
             await nuny.discord_utils.update_message(name,expansion,msg)
@@ -174,7 +220,7 @@ async def update_messages():
 
 async def update_channels():
     """Fetch data db and update channel names."""
-    for w in nuny.config.conf["channels"]["worlds"]:
+    for w in nuny.config.conf["worlds"]:
         world=w["name"]
         s_world=w["short"]
         for e in w["channels"].items():

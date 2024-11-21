@@ -16,7 +16,7 @@ async def on_command_error(ctx: commands.Context, error):
     # Handle your errors here
     
     # Act only on command channels
-    if ctx.channel.id!=nuny.config.conf["channels"]["botchan"]:
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
     
     if isinstance(error, commands.TooManyArguments):
@@ -78,7 +78,7 @@ async def update_message(world,expansion,text):
     """Update a status message"""
     
     try:
-        w=[w for w in nuny.config.conf["channels"]["worlds"] if w["name"]==world][0]
+        w=[w for w in nuny.config.conf["worlds"] if w["name"]==world][0]
     except IndexError:
         raise ValueError("Invalid world")
     channel=w["channels"][expansion]
