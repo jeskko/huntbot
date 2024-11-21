@@ -12,7 +12,7 @@ import nuny.config
 import nuny.discord_utils
 import nuny.state
 
-from nuny.misc_utils import periodicstatus, update_messages, update_channels
+from nuny.misc_utils import periodicstatus, update_messages, update_channels, groundskeeper, dailycleanup
 from nuny.sonar import websocketrunner
 
 import nuny.commands
@@ -24,6 +24,10 @@ logging.getLogger('websockets.client').setLevel(logging.INFO)
 async def STLoop():
     now=datetime.datetime.strftime(datetime.datetime.utcnow(),"%H:%M")
     await nuny.discord_utils.bot.change_presence(activity=discord.Game(f"Server time: {now}"))
+    try:
+        await groundskeeper()
+    except Exception as e:
+        logging.error(f'STLoop error: {e}')
 
 @tasks.loop(seconds = 1800)
 async def StatusLoop():
@@ -33,6 +37,13 @@ async def StatusLoop():
         logging.error(f'StatusLoop error: {e}')
         pass
 
+@tasks.loop(hours=24)
+async def DailyLoop():
+    try:
+        await dailycleanup()
+    except Exception as e:
+        logging.error(f'"DailyLoop error: {e}')
+        
 @tasks.loop(seconds = 300)
 async def ChannelLoop():
     try:

@@ -6,7 +6,7 @@ import nuny.db_utils
 import nuny.discord_utils
 
 from nuny.log_utils import bot_log,scout_log
-from nuny.misc_utils import speculate,mapping,parse_parameters,parse_world,set_status,get_statuses,get_history
+from nuny.misc_utils import speculate,mapping,parse_parameters,parse_world,set_status,get_statuses,get_history,maintenance_reboot
 from nuny.sonar import sonar_stats
 
 async def log_cmd(ctx):
@@ -186,7 +186,50 @@ async def undo(ctx,id):
 
     nuny.db_utils.delstatus(id)
     await ctx.message.add_reaction("✅")
+    
+@nuny.discord_utils.bot.command(name="adjust",aliases=['fix'],help="Adjust timestamp of a previous status.")
+async def adjust(ctx,id,time):
 
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
+    await log_cmd(ctx)
+
+    try:
+        id=int(id)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid ID.")
+        return()
+
+    time,exp=parse_parameters(time,7)
+    nuny.db_utils.settime(id,time)
+    await ctx.message.add_reaction("✅")
+    
+@nuny.discord_utils.bot.command(name="reboot",help="Set reboot timer after maintenance.")
+async def reboot(ctx,time):
+
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
+    await log_cmd(ctx)
+
+    time,exp=parse_parameters(time,7)
+    maintenance_reboot(time)
+    await ctx.message.add_reaction("✅")
+
+@nuny.discord_utils.bot.command(name="cleanup",help="Manually clean up over 7 days old statuses.")
+async def cleanup(ctx):
+
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
+    await log_cmd(ctx)
+
+    r=nuny.db_utils.cleanup()
+    await ctx.send(f"{r} entries were deleted.")
+    await ctx.message.add_reaction("✅")
+    
 @nuny.discord_utils.bot.command(name="advertise", 
                                 aliases=['ad','shout','sh'],
                                 help='''Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). 

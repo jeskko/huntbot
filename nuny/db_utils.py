@@ -38,7 +38,7 @@ def setstatus(world,exp,status,time):
     cursor.execute(ins,(worldid,exp,status,time))
     return
 
-def gethistory(world,exp):
+def gethistory(world,exp,time=None):
     sel="""
     SELECT id,status,time from 'status'
     WHERE worldid=? and expansion=? ORDER BY time DESC LIMIT 10
@@ -56,3 +56,21 @@ def delstatus(id):
     id=int(id)
     cursor.execute(sel,(id,))
     return
+
+def settime(id,time):
+    sel="""
+    UPDATE 'status'
+    SET time=?
+    WHERE id=?
+    """
+    id=int(id)
+    cursor.execute(sel,(time,id))
+
+def cleanup():
+    sel="""
+    DELETE from 'status'
+    WHERE time<?
+    """
+    time=datetime.datetime.utcnow()-datetime.timedelta(days=7)
+    cursor.execute(sel,(time,))
+    return cursor.rowcount

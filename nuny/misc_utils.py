@@ -11,6 +11,27 @@ import nuny.db_utils
 from nuny.sonar import sonar_speculate,sonar_mapping
 from nuny.log_utils import bot_log
 
+async def groundskeeper():
+    # check all statuses and update if timers say so
+    for w in nuny.config.conf["worlds"]:
+        for expansion in range(5,8):
+            n=w["name"]
+            (status,time)=nuny.db_utils.getstatus(n,expansion)
+            td=datetime.datetime.utcnow()-time
+            if status=="Dead" and td>datetime.timedelta(hours=6):
+                nuny.db_utils.setstatus(n,expansion,"Up",time+datetime.timedelta(hours=6))
+                logging.info(f"{n} {expansion}.0 changed to up.")
+            if status=="Rebooted" and td>datetime.timedelta(hours=3,minutes=36):
+                nuny.db_utils.setstatus(n,expansion,"Up",time+datetime.timedelta(hours=3,minutes=36))
+                logging.info(f"{n} {expansion}.0 changed to up.")
+            if status=="Running" and td>datetime.timedelta(hours=1,minutes=30):
+                nuny.db_utils.setstatus(n,expansion,"Dead",time+datetime.timedelta(hours=1))
+                logging.info(f"{n} {expansion}.0 changed to dead, someone forgot to end their train.")
+                
+async def dailycleanup():
+    r=nuny.db_utils.cleanup()
+    logging.info(f"Daily cleanup done, {r} statuses that were over week old were removed.")
+                  
 def set_status(world,status,expansion,time=None):
     time,expansion=parse_parameters(time,expansion)
     nuny.db_utils.setstatus(world,expansion,status,time)
@@ -33,10 +54,9 @@ def get_statuses(expansion):
             t2=""
         else:
             if t2_h>168:
-                t2=""                
+                t2="long"                
             else:
                 t2=f"{t2_h}:{t2_m:02d}"
-        
         table.append([w["name"],t1,t2,status])
     message+=tabulate(table,headers="firstrow",tablefmt="fancy_grid")+"```"        
     return message
@@ -48,7 +68,12 @@ def get_history(world,expansion):
     for r in nuny.db_utils.gethistory(world,expansion):
         table.append(r)
     message+=tabulate(table,headers="firstrow",tablefmt="fancy_grid")+"```"        
-    return message
+    return message 
+
+def maintenance_reboot(time):
+    for w in nuny.config.conf["worlds"]:
+       for e in range(5,8):
+           nuny.db_utils.setstatus(w["name"],e,"Rebooted",time)
 
 def parse_world(world):
     """
@@ -184,8 +209,13 @@ def parse_parameters(time,expansion):
                         t=time.split(":")
                         if len(t)==2:
                             h=int(t[0])
-                            m=int(t[1])
+                            m=int(t[1][0:2])
                             time=datetime.datetime.utcnow().replace(hour=h,minute=m,second=45)
+                            if len(t[1])==4:
+                                if t[1][2]=="-":
+                                    time=datetime.timedelta(days=-int(t[1][3]))+time
+                                if t[1][2]=="+":
+                                    time=datetime.timedelta(days=int(t[1][3]))+time
                         else:
                             raise ValueError("Invalid time value")
             except ValueError:
