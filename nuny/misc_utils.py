@@ -206,6 +206,7 @@ def parse_parameters(time,expansion):
     """
     if time==None:
             time=datetime.datetime.utcnow()
+
             if expansion==None:
                 exp=nuny.config.conf["def_exp"]
             else:
@@ -226,6 +227,7 @@ def parse_parameters(time,expansion):
                         time=datetime.timedelta(minutes=-int(time[1:]))+datetime.datetime.utcnow()     
                     else:              
                         t=time.split(":")
+
                         if len(t)==2:
                             h=int(t[0])
                             m=int(t[1][0:2])

@@ -268,6 +268,7 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid world.")
         return()
 
+
     try:
         expansion=int(expansion)
     except ValueError:
@@ -286,6 +287,7 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
     if expansion in range(2,5):
         msg=f"About to send this notification to various servers: ```@Old_train_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
         
+
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
 
@@ -335,6 +337,7 @@ async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
         await ctx.message.add_reaction("❌")
         await ctx.send("Message needs to be over 5 characters.")
         return
+
 
     try:
         expansion=int(expansion)

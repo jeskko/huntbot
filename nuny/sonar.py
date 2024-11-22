@@ -248,9 +248,9 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND l
             """
 
     if l==0:
-        exp=5
+        exp=6
     else:
-        exp=4
+        exp=5
 
     nuny.db_utils.cursor.execute(sel_stat,(exp, world))
     stats=nuny.db_utils.cursor.fetchall()[0]
