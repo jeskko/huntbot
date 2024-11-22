@@ -50,7 +50,7 @@ async def ChannelLoop():
         await update_channels()
         await update_messages()
     except Exception as e:
-        logging.error(f'SheetLoop error: {e}')
+        logging.error(f'ChannelLoop error: {e}')
         pass
     
 

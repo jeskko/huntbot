@@ -17,8 +17,13 @@ async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await log_cmd(ctx)
-    
-    msg=speculate(world,expansion)
+    if expansion in range(5,8):
+        msg=speculate(world,expansion)
+    else:
+        await ctx.send("Untracked expansion")
+        await ctx.message.add_reaction("❓")
+        return
+    await ctx.message.add_reaction("✅")
     await ctx.send(msg)
 
 @nuny.discord_utils.bot.command(name='mapping', aliases=["map",], help='Check mapping data from Sonar')
@@ -27,10 +32,14 @@ async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
         return
 
     await log_cmd(ctx)
-
-    msg=mapping(world, expansion)
+    try:
+        msg=mapping(world, expansion)
+    except ValueError as ex:
+        await ctx.message.add_reaction("❓")
+        await ctx.send(ex)
+        return()
+    await ctx.message.add_reaction("✅")
     await ctx.send(msg)
-
 
 @nuny.discord_utils.bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.')
 async def scouting(ctx, world, expansion=nuny.config.conf["def_exp"]):
@@ -38,27 +47,7 @@ async def scouting(ctx, world, expansion=nuny.config.conf["def_exp"]):
         return
 
     await log_cmd(ctx)
- 
-    try:
-        world=parse_world(world)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid world.")
-        return()
-    
-    if expansion in range(5,8):
-        set_status(world,"Scouting",expansion)
-        await ctx.message.add_reaction("✅")
-    else:
-        await ctx.message.add_reaction("❓")
 
-@nuny.discord_utils.bot.command(name='scoutcancel', aliases=['cancel', 'sccancel', 'scc'], help="Cancel scouting. Return server to up status.")
-async def scoutcancel(ctx, world, expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
-
-    await log_cmd(ctx)
- 
     try:
         world=parse_world(world)
     except ValueError:
@@ -66,11 +55,12 @@ async def scoutcancel(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid world.")
         return()
 
-    if expansion in range(5,8):
-        set_status(world,"Up",expansion)
+    try:
+        set_status(world,"Scouting",expansion, "last")
         await ctx.message.add_reaction("✅")
-    else:
+    except ValueError as ex:
         await ctx.message.add_reaction("❓")
+        await ctx.send(ex)
 
 @nuny.discord_utils.bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.')
 async def scoutend(ctx, world, expansion=nuny.config.conf["def_exp"]):
@@ -86,11 +76,12 @@ async def scoutend(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid world.")
         return()
 
-    if expansion in range(5,8):
-        set_status(world,"Scouted",expansion)
+    try:
+        set_status(world,"Scouted",expansion,"last")
         await ctx.message.add_reaction("✅")
-    else:
+    except ValueError as ex:
         await ctx.message.add_reaction("❓")
+        await ctx.send(ex)
 
 @nuny.discord_utils.bot.command(name='start', aliases=['begin','run','go'],help='Start train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
 async def begintrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"]):
@@ -106,19 +97,20 @@ async def begintrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"
         await ctx.send("Invalid world.")
         return()
 
-    if expansion in range(5,8):
-        set_status(world,"Running",time)
+    try:
+        set_status(world,"Running",expansion,time)
         await ctx.message.add_reaction("✅")
-    else:
+    except ValueError as ex:
         await ctx.message.add_reaction("❓")
+        await ctx.send(ex)
 
 @nuny.discord_utils.bot.command(name='end', aliases=['done','dead','finish'],help='Finish train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
-async def endtrain(ctx, world, time=None,expansion=int(nuny.config.conf["def_exp"])):
+async def endtrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
     await log_cmd(ctx)
- 
+
     try:
         world=parse_world(world)
     except ValueError:
@@ -126,15 +118,14 @@ async def endtrain(ctx, world, time=None,expansion=int(nuny.config.conf["def_exp
         await ctx.send("Invalid world.")
         return()
 
-    if expansion in range(5,8):
+    try:
         set_status(world,"Dead",expansion,time)
         await ctx.message.add_reaction("✅")
-    else:
+        if nuny.config.conf["sonar"]["enable"]==True:    
+            await scout_log(sonar_stats(world,expansion))
+    except ValueError as ex:
         await ctx.message.add_reaction("❓")
-        await ctx.send(f"Invalid or non-tracked expansion.")
-
-    if nuny.config.conf["sonar"]["enable"]==True:    
-        await scout_log(sonar_stats(world,expansion))
+        await ctx.send(ex)
 
 @nuny.discord_utils.bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
 async def getstatus(ctx, expansion=nuny.config.conf["def_exp"]):
@@ -142,13 +133,16 @@ async def getstatus(ctx, expansion=nuny.config.conf["def_exp"]):
         return
 
     await log_cmd(ctx)
-    
-    if expansion in range(5,8):
-        msg=get_statuses(expansion)
-        await ctx.send(msg)
-        await ctx.message.add_reaction("✅")
-    else:
-        await ctx.message.add_reaction("❓")
+    try:
+        if int(expansion) in range(5,8):
+            msg=get_statuses(expansion)
+            await ctx.send(msg)
+            await ctx.message.add_reaction("✅")
+        else:
+            await ctx.message.add_reaction("❓")
+            await ctx.send("Invalid expansion")
+    except ValueError:
+        await ctx.send("Invalid expansion")
 
 @nuny.discord_utils.bot.command(name="history", aliases=['hist'],help='Get status history')
 async def gethistory(ctx, world, expansion=nuny.config.conf["def_exp"]):
@@ -168,6 +162,7 @@ async def gethistory(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.send(msg)
         await ctx.message.add_reaction("✅")
     else:
+        await ctx.send("Invalid expansion")
         await ctx.message.add_reaction("❓")
 
 @nuny.discord_utils.bot.command(name="undo",help="Undo a previous status.")
@@ -211,12 +206,27 @@ async def reboot(ctx,time):
 
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
-
     await log_cmd(ctx)
-
     time,exp=parse_parameters(time,7)
-    maintenance_reboot(time)
-    await ctx.message.add_reaction("✅")
+
+    msg1=await ctx.send(f"About to reset all worlds maintenance end to time {time}. Confirm by reacting to this with a ✅.")
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
+
+    try:
+        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
+    except asyncio.TimeoutError:
+        logging.debug("Timed out while waiting for reaction.")
+        await msg1.delete()
+        await ctx.message.add_reaction('❌')
+        
+    else:
+        maintenance_reboot(time)
+        await msg1.delete()
+        await ctx.message.add_reaction("✅")
+        await ctx.send(f"All servers adjusted for server reboot at {time}.")
 
 @nuny.discord_utils.bot.command(name="cleanup",help="Manually clean up over 7 days old statuses.")
 async def cleanup(ctx):
@@ -258,8 +268,14 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid world.")
         return()
 
-    parm=parse_parameters(None,expansion)
-    expansion=parm[1]
+    try:
+        expansion=int(expansion)
+    except ValueError:
+        await ctx.send("Invalid expansion")
+        return
+    if expansion not in range(2,8):
+        await ctx.send("Invalid expansion")
+        return
 
     if expansion==7:
         msg=f"About to send this notification to various servers: ```@Dawntrail_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
@@ -269,8 +285,6 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
         msg=f"About to send this notification to various servers: ```@Shadowbringers_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
     if expansion in range(2,5):
         msg=f"About to send this notification to various servers: ```@Old_train_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
-
-    ### tähän virheenkäsittely jos annetaan huono expansion    
         
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
@@ -322,16 +336,24 @@ async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Message needs to be over 5 characters.")
         return
 
-    parm=parse_parameters(None,expansion)
-    l=parm[1]
-    stb=parm[2]
-    if l==0:
-        msg=f"About to send this notification to various servers: ```@Endwalker_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
-    if l==1:
-        msg=f"About to send this notification to various servers: ```@Shadowbringers_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
-    if stb==1:
-        msg=f"About to send this notification to various servers: ```@Stormblood_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
+    try:
+        expansion=int(expansion)
+    except ValueError:
+        await ctx.send("Invalid expansion")
+        return
+    if expansion not in range(2,8):
+        await ctx.send("Invalid expansion")
+        return
 
+    if expansion==7:
+        msg=f"About to send this notification to various servers: ```@Dawntrail_role {message} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+    if expansion==6:
+        msg=f"About to send this notification to various servers: ```@Endwalker_role {message} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+    if expansion==5:
+        msg=f"About to send this notification to various servers: ```@Shadowbringers_role {message} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+    if expansion in range(2,5):
+        msg=f"About to send this notification to various servers: ```@Old_train_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
+        
     msg1=await ctx.send(msg)
     await msg1.add_reaction("✅")
 
@@ -353,17 +375,10 @@ async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
             for i in nuny.discord_utils.bot.guilds:
                 emoji=nuny.discord_utils.discord.utils.get(i.emojis, name="doggospin")
             await msg1.add_reaction(emoji)
-
-            expansion=6
-            if l==1:
-                expansion=5
-            if stb==1:
-                expansion=4
-            
+          
             msg=f"{message} (Conductor: {username})."
             await nuny.discord_utils.post_webhooks(msg,expansion)
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
-            if stb!=1:
-                await scout_log("Please set the server running manually if needed.")
+            await scout_log("Please set the server running manually if needed.")

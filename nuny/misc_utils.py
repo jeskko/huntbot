@@ -32,9 +32,22 @@ async def dailycleanup():
     r=nuny.db_utils.cleanup()
     logging.info(f"Daily cleanup done, {r} statuses that were over week old were removed.")
                   
-def set_status(world,status,expansion,time=None):
-    time,expansion=parse_parameters(time,expansion)
-    nuny.db_utils.setstatus(world,expansion,status,time)
+def set_status(world,status,expansion,time=None):  
+    """
+    Update status for a server. use "last" as time parameter to use the timestamp of last status (will be incremented by 1 second so sorting works properly).
+    """
+    if expansion in range(5,8):
+        if time=="last":
+            time,expansion=parse_parameters(None,expansion)
+            (s,time)=nuny.db_utils.getstatus(world,expansion)
+            time=time+datetime.timedelta(seconds=1)
+        else:
+            time,expansion=parse_parameters(time,expansion)
+                
+        logging.info(f"Setting status for world {world} {expansion}.0 to {status} at {time}.")
+        nuny.db_utils.setstatus(world,expansion,status,time)
+    else:
+        raise ValueError("Untracked expansion")
     return
 
 def get_statuses(expansion):
@@ -146,6 +159,8 @@ def speculate(world,expansion):
     msg=f"Status **{status}** for **{w}** {expansion}.0 was set at {time}.\n"
     if status=="Dead":
         msg+=spec_delta(time,12600,21600,"spawn")
+    if status=="Rebooted":
+        msg+=spec_delta(time,8640,12960,"spawn")        
     if status=="Up" or status=="Scouting" or status=="Scouted":
         dur=now-time+datetime.timedelta(hours=0)
         if int(dur.total_seconds())<86400:
@@ -191,13 +206,17 @@ def parse_parameters(time,expansion):
     """
     if time==None:
             time=datetime.datetime.utcnow()
-            exp=nuny.config.conf["def_exp"]
+            if expansion==None:
+                exp=nuny.config.conf["def_exp"]
+            else:
+                exp=expansion
     else:
         if len(time)==1:
             try: 
                 exp=int(time)
             except:
-                raise ValueError("Invalid non-numeric expansion")                  
+                raise ValueError("Invalid non-numeric expansion")    
+            time=datetime.datetime.utcnow()              
         else:
             try:
                 if time[0]=="+":
@@ -220,6 +239,8 @@ def parse_parameters(time,expansion):
                             raise ValueError("Invalid time value")
             except ValueError:
                 raise ValueError("Invalid time value")
+            if expansion==None:
+                expansion=nuny.config.config["def_exp"]
             try:
                 exp=int(expansion)
             except:

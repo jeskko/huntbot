@@ -26,6 +26,10 @@ async def on_command_error(ctx: commands.Context, error):
     if isinstance(error, commands.CommandNotFound):
         await ctx.message.add_reaction('❌')
         await ctx.send("Command not found. Check your typing.")
+        
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.message.add_reaction('❌')
+        await ctx.send("Command is missing a required argument.")
 
     else:
         # All unhandled errors will print their original traceback
