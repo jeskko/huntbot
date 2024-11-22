@@ -10,22 +10,15 @@ You'll need several channels on your server, basically something like this:
  - sonar log channel
  - special log channel (will be populated with s-rank snipes)
  - bot technical log channel
+ - 8 Dawntrail channels
  - 8 Endwalker channels
  - 8 Shadowbringers channels
-
-Something like this:
-
-![](https://jvaarani.kapsi.fi/nuny_channels.png)
 
 In addition you can make another channel where you make a webhook that will receive train advertisements from your test bot instance.
 
 ### Discord bot setup
 
 See [this](https://discordpy.readthedocs.io/en/stable/discord.html) guide.
-
-## Sheets setup
-
-Ask me for a copy of the magic sheets if you already don't have access. In addition you'll need to set up service account for the bot, [this](https://medium.com/@matheodaly.md/using-google-drive-api-with-python-and-a-service-account-d6ae1f6456c2) page seems to have some clues on how to do this. Basically you'll need to put your service account credentials in nuny.json (example in nuny.json.example).
 
 ## Bot config setup
 

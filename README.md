@@ -1,4 +1,4 @@
-A dirty hack for syncing FFXIV hunt train status between Discord and a Google sheet document.
+A dirty hack for coordinating FFXIV hunt train status.
 
 If you want to try to get this running on your own server, you can contact me for example on Discord and I might be able to help a bit in the initial setup.
 

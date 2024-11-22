@@ -1,25 +1,107 @@
 import datetime
+import logging
+from tabulate import tabulate
+
+
 import nuny.config
-
 import nuny.discord_utils
+import nuny.db_utils
 
-from nuny.sheet_utils import worldStatusLoc,worldTimeLoc,fetch_sheet,update_from_sheets_to_chat
+
 from nuny.sonar import sonar_speculate,sonar_mapping
 from nuny.log_utils import bot_log
+
+async def groundskeeper():
+    # check all statuses and update if timers say so
+    for w in nuny.config.conf["worlds"]:
+        for expansion in range(5,8):
+            n=w["name"]
+            (status,time)=nuny.db_utils.getstatus(n,expansion)
+            td=datetime.datetime.utcnow()-time
+            if status=="Dead" and td>datetime.timedelta(hours=6):
+                nuny.db_utils.setstatus(n,expansion,"Up",time+datetime.timedelta(hours=6))
+                logging.info(f"{n} {expansion}.0 changed to up.")
+            if status=="Rebooted" and td>datetime.timedelta(hours=3,minutes=36):
+                nuny.db_utils.setstatus(n,expansion,"Up",time+datetime.timedelta(hours=3,minutes=36))
+                logging.info(f"{n} {expansion}.0 changed to up.")
+            if status=="Running" and td>datetime.timedelta(hours=1,minutes=30):
+                nuny.db_utils.setstatus(n,expansion,"Dead",time+datetime.timedelta(hours=1))
+                logging.info(f"{n} {expansion}.0 changed to dead, someone forgot to end their train.")
+                
+async def dailycleanup():
+    r=nuny.db_utils.cleanup()
+    logging.info(f"Daily cleanup done, {r} statuses that were over week old were removed.")
+                  
+def set_status(world,status,expansion,time=None):  
+    """
+    Update status for a server. use "last" as time parameter to use the timestamp of last status (will be incremented by 1 second so sorting works properly).
+    """
+    if expansion in range(5,8):
+        if time=="last":
+            time,expansion=parse_parameters(None,expansion)
+            (s,time)=nuny.db_utils.getstatus(world,expansion)
+            time=time+datetime.timedelta(seconds=1)
+        else:
+            time,expansion=parse_parameters(time,expansion)
+                
+        logging.info(f"Setting status for world {world} {expansion}.0 to {status} at {time}.")
+        nuny.db_utils.setstatus(world,expansion,status,time)
+    else:
+        raise ValueError("Untracked expansion")
+    return
+
+def get_statuses(expansion):
+    message=f"{expansion}.0 status:\n```"
+    table=[]
+    table.append(["Server","Status\nchanged","Status\nduration","Status"])
+    for w in nuny.config.conf["worlds"]:
+        (status,time)=nuny.db_utils.getstatus(w["name"],expansion)
+        if status=="Unknown":
+            t1=""
+        else:
+            t1=datetime.datetime.strftime(time,"%d.%m %H:%M")
+        t2_td=datetime.datetime.utcnow()-time
+        t2_h=int(divmod(t2_td.total_seconds(),3600)[0])
+        t2_m=int(divmod(divmod(t2_td.total_seconds(),3600)[1],60)[0])
+        if t2_h<0:
+            t2=""
+        else:
+            if t2_h>168:
+                t2="long"                
+            else:
+                t2=f"{t2_h}:{t2_m:02d}"
+        table.append([w["name"],t1,t2,status])
+    message+=tabulate(table,headers="firstrow",tablefmt="fancy_grid")+"```"        
+    return message
+
+def get_history(world,expansion):
+    message=f"Last statuses for {world} {expansion}.0:\n```"
+    table=[]
+    table.append(["Id","Status","Timestamp"])
+    for r in nuny.db_utils.gethistory(world,expansion):
+        table.append(r)
+    message+=tabulate(table,headers="firstrow",tablefmt="fancy_grid")+"```"        
+    return message 
+
+def maintenance_reboot(time):
+    for w in nuny.config.conf["worlds"]:
+       for e in range(5,8):
+           nuny.db_utils.setstatus(w["name"],e,"Rebooted",time)
 
 def parse_world(world):
     """
     Convert text input to world name useable on various functions. 
-    Really simple, uses only the first letter of the input to figure out which world it is. Works on Light DC but on datacenters with overlapping initial letters this would be a problem.
     Raises ValueError in case of invalid world being tried to be parsed.
     """
     
-    initial=world[0].lower()
-    w=[w for w in nuny.config.conf["worlds"] if w["initial"]==initial]
+    wl=world.lower()
+    w=[w for w in nuny.config.conf["worlds"] if w["name"].lower()[0:len(wl)]==wl]
     try:
         name=w[0]["name"]
     except IndexError:
         raise ValueError("Invalid world")
+    if len(w)>1:
+        raise ValueError("Ambiguous world")
     return name
         
 def delta_to_words(delta):
@@ -58,34 +140,27 @@ def spec_delta(time,start_s,end_s,type):
             msg=f"Marks have started to despawn {st} ago and will be fully despawned in {en}."
     return msg
 
-def speculate(world,legacy=None):
+def speculate(world,expansion):
     """
     Speculate about hunt marks and their spawn/despawn status.
     https://cdn.discordapp.com/attachments/884351171668619265/972159569658789978/unknown.png
     Also checks Sonar data about the selected world.
     """
-    
     now=datetime.datetime.utcnow()
-    l=0
-    l_text=""
-    if legacy[0].capitalize()=="L":
-        l=1
-        l_text=" (legacy) "
+    
     try:
         w=parse_world(world)
     except ValueError:
         return("Invalid world.")
 
-    timecell="Up Times!"+worldTimeLoc(w,l)
-    statuscell="Up Times!"+worldStatusLoc(w,l)
-
-    time=datetime.datetime(1899,12,30)+datetime.timedelta(days=fetch_sheet(timecell)[0][0])
+    status,time=nuny.db_utils.getstatus(w,expansion)
     delta=now-time
-    status=fetch_sheet(statuscell)[0][0]
 
-    msg=f"Status **{status}** for **{w}**{l_text} was set at {time}.\n"
+    msg=f"Status **{status}** for **{w}** {expansion}.0 was set at {time}.\n"
     if status=="Dead":
         msg+=spec_delta(time,12600,21600,"spawn")
+    if status=="Rebooted":
+        msg+=spec_delta(time,8640,12960,"spawn")        
     if status=="Up" or status=="Scouting" or status=="Scouted":
         dur=now-time+datetime.timedelta(hours=0)
         if int(dur.total_seconds())<86400:
@@ -108,67 +183,118 @@ def speculate(world,legacy=None):
                             else:
                                 msg+="Condition uncertain, try to run trains more often."
     if nuny.config.conf["sonar"]["enable"]==True:
-        msg+=sonar_speculate(w,l)
+        msg+=sonar_speculate(w,expansion)
     return msg
 
-def mapping(world,legacy=None):
+def mapping(world,expansion):
     """Fetches mapping data estimate from Sonar."""
     if nuny.config.conf["sonar"]["enable"]==True:
         
         try:
             w=parse_world(world)
         except ValueError:
-            return("Invalid world.")  
-        msg=sonar_mapping(w,legacy)
+            return(f"Invalid world {world}.")  
+        msg=sonar_mapping(w,expansion)
     else:
         msg="Sonar is disabled for this bot, unable to do mapping."
     return msg
  
-def parse_parameters(time,leg):
-    """Tries to sanitize time and legacy parameters given on a bot command."""
-    try:
-        if time==None:
+def parse_parameters(time,expansion):
+    """
+    Tries to sanitize time and legacy parameters given on a bot command.
+    Will raise ValueError if input is incoherent.
+    """
+    if time==None:
             time=datetime.datetime.utcnow()
-        else:
-            if time[0].capitalize()=="L" or time[0]=="6":
-                leg="L"
-                time=datetime.datetime.utcnow()
+
+            if expansion==None:
+                exp=nuny.config.conf["def_exp"]
             else:
-                if time[0]=="5":
-                    leg="5"
+                exp=expansion
+    else:
+        if len(time)==1:
+            try: 
+                exp=int(time)
+            except:
+                raise ValueError("Invalid non-numeric expansion")    
+            time=datetime.datetime.utcnow()              
+        else:
+            try:
+                if time[0]=="+":
+                    time=datetime.timedelta(minutes=int(time[1:]))+datetime.datetime.utcnow()
                 else:
-                    if time[0]=="+":
-                        time=datetime.timedelta(minutes=int(time[1:]))+datetime.datetime.utcnow()
-                    else:
+                    if time[0]=="-":
+                        time=datetime.timedelta(minutes=-int(time[1:]))+datetime.datetime.utcnow()     
+                    else:              
                         t=time.split(":")
-                        h=int(t[0])
-                        m=int(t[1])
-                        time=datetime.datetime.utcnow().replace(hour=h,minute=m,second=45)
-    except ValueError:
-        time=datetime.datetime.utcnow()
-    l=0
-    shb=0
-    if leg[0].capitalize()=="L":
-        l=1
-    if leg[0]=="6":
-        l=1
-    if leg[0]=="5":
-        shb=1
-        l=1
-    return [time,l,shb]        
+
+                        if len(t)==2:
+                            h=int(t[0])
+                            m=int(t[1][0:2])
+                            time=datetime.datetime.utcnow().replace(hour=h,minute=m,second=45)
+                            if len(t[1])==4:
+                                if t[1][2]=="-":
+                                    time=datetime.timedelta(days=-int(t[1][3]))+time
+                                if t[1][2]=="+":
+                                    time=datetime.timedelta(days=int(t[1][3]))+time
+                        else:
+                            raise ValueError("Invalid time value")
+            except ValueError:
+                raise ValueError("Invalid time value")
+            if expansion==None:
+                expansion=nuny.config.config["def_exp"]
+            try:
+                exp=int(expansion)
+            except:
+                raise ValueError("Invalid non-numeric expansion")
+            if (exp<2 or exp>7):
+                raise ValueError("Invalid expansion")
+    return (time,exp) 
 
 async def periodicstatus():
     """Get statuses for different servers and log them on bot log channel. This is run from StatusLoop every 5 minutes."""
     
-    msg=await update_from_sheets_to_chat(0)
+    msg=get_statuses(7)
     await bot_log(msg)
-    msg=await update_from_sheets_to_chat(1)
+    msg=get_statuses(6)
     await bot_log(msg)
+    msg=get_statuses(5)
+    await bot_log(msg)
+    
 
 async def update_messages():
     """Update status messages on different world channels."""
-    for legacy in [" ","l"]:
+    for expansion in [5,6,7]:
         for world in nuny.config.conf["worlds"]:
             name=world["name"]
-            msg=speculate(name,legacy)+"\n\n"+mapping(name,legacy)
-            await nuny.discord_utils.update_message(name,legacy,msg)
+            msg=speculate(name,expansion)+"\n\n"+mapping(name,expansion)
+            await nuny.discord_utils.update_message(name,expansion,msg)
+
+
+async def update_channels():
+    """Fetch data db and update channel names."""
+    for w in nuny.config.conf["worlds"]:
+        world=w["name"]
+        s_world=w["short"]
+        for e in w["channels"].items():
+            exp=e[0]
+            chan=e[1]
+            status,time=nuny.db_utils.getstatus(world,exp)
+            await update_channel(chan,s_world,status)
+    print("update channels done")
+
+async def update_channel(chan,s_name,status):
+    """Update channel name value. Will check if actual update is necessary to avoid rate limiting."""
+    
+    try:
+        st=[st for st in nuny.config.conf["statuses"] if st["name"]==status][0]
+    except IndexError:
+        raise ValueError(f"Invalid world status {status}.")
+    newname=f'{st["icon"]}{s_name}-{st["short"]}'
+    
+    chan=nuny.discord_utils.bot.get_channel(chan) 
+    if chan.name != newname:
+        logging.debug(f"Updating channel name from {chan.name} to {newname}.")
+        await chan.edit(name=newname)
+    else:
+        logging.debug("no need to update channel name.")

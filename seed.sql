@@ -62,4 +62,13 @@ CREATE TABLE `regions`
     `name` text
 );
 
+CREATE TABLE 'status'
+(
+    'id'            integer PRIMARY KEY,
+    'worldid'       integer,
+    'expansion'     integer,
+    'time'          timestamp,
+    'status'        text
+);
+
 CREATE INDEX 'hunt_index_0' on 'hunt' ('key', 'huntid', 'worldid');

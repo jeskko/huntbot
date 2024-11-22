@@ -14,6 +14,11 @@ intents.message_content=True
 
 async def on_command_error(ctx: commands.Context, error):
     # Handle your errors here
+    
+    # Act only on command channels
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+    
     if isinstance(error, commands.TooManyArguments):
         await ctx.message.add_reaction('❌')
         await ctx.send("Too many arguments. You might have forgot to put the message in \"\".")
@@ -21,6 +26,10 @@ async def on_command_error(ctx: commands.Context, error):
     if isinstance(error, commands.CommandNotFound):
         await ctx.message.add_reaction('❌')
         await ctx.send("Command not found. Check your typing.")
+        
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.message.add_reaction('❌')
+        await ctx.send("Command is missing a required argument.")
 
     else:
         # All unhandled errors will print their original traceback
@@ -56,6 +65,7 @@ async def post_webhooks(msg, expansion):
                 
 async def check_messages():
     """Verify that status messages exist on every server channel and make new ones if needed."""
+    
     print("Checking status messages",end="")
     for channel,msg_id in nuny.state.state["statuses"].items():
         chan=bot.get_channel(channel)
@@ -68,17 +78,14 @@ async def check_messages():
         print(".",end="")
     print(" done")
 
-async def update_message(world,legacy,text):
+async def update_message(world,expansion,text):
     """Update a status message"""
-    if legacy=="l":
-        l=5
-    else:
-        l=6
+    
     try:
         w=[w for w in nuny.config.conf["worlds"] if w["name"]==world][0]
     except IndexError:
         raise ValueError("Invalid world")
-    channel=w[l]["channel"]
+    channel=w["channels"][expansion]
     msg_id=nuny.state.state["statuses"][channel]
     chan=bot.get_channel(channel)
     try: 

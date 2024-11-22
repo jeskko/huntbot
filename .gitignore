@@ -1,6 +1,7 @@
 env
 venv
 .env
+.venv
 .vscode
 hunt.db
 *.yaml

@@ -8,9 +8,6 @@ with open('config.yaml','r') as file:
     
 assets=conf["sonar"]["asset"]
 
-if conf["sonar"]["enable"]==False:
-    exit()
-
 conn = sqlite3.connect('hunt.db')
 cursor=conn.cursor()
 
