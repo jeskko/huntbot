@@ -121,7 +121,8 @@ async def endtrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"])
     try:
         set_status(world,"Dead",expansion,time)
         await ctx.message.add_reaction("✅")
-        if nuny.config.conf["sonar"]["enable"]==True:    
+        if nuny.config.conf["sonar"]["enable"]==True:
+            (time,expansion)=parse_parameters(time,expansion) 
             await scout_log(sonar_stats(world,expansion))
     except ValueError as ex:
         await ctx.message.add_reaction("❓")
