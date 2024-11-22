@@ -238,7 +238,7 @@ ORDER BY hunt.zoneid,hunt.instanceid
     msg+="```"
     return msg
         
-def sonar_stats(world,l):
+def sonar_stats(world,exp):
     # statistics 
     sel_stat="""
 SELECT round(avg(players)),min(players),max(players) from hunt 
@@ -247,10 +247,7 @@ INNER JOIN worlds on worlds.id=hunt.worldid
 WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-45 minutes') AND players>10
             """
 
-    if l==0:
-        exp=6
-    else:
-        exp=5
+    exp=exp-1
 
     nuny.db_utils.cursor.execute(sel_stat,(exp, world))
     stats=nuny.db_utils.cursor.fetchall()[0]
