@@ -35,12 +35,17 @@ async def dailycleanup():
 def set_status(world,status,expansion,time=None):  
     """
     Update status for a server. use "last" as time parameter to use the timestamp of last status (will be incremented by 1 second so sorting works properly).
+    If status was "Dead" or "Rebooted" and "last" was used as time parameter, adjust the time to reflect when the server would have been actually up
     """
     if expansion in range(5,8):
         if time=="last":
             time,expansion=parse_parameters(None,expansion)
             (s,time)=nuny.db_utils.getstatus(world,expansion)
             time=time+datetime.timedelta(seconds=1)
+            if s=="Dead":
+                time=time+datetime.timedelta(hours=6)
+            if s=="Rebooted":
+                time=time+datetime.timedelta(hours=3,minutes=36)
         else:
             time,expansion=parse_parameters(time,expansion)
                 
