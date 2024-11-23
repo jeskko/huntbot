@@ -38,6 +38,24 @@ def setstatus(world,exp,status,time):
     cursor.execute(ins,(worldid,exp,status,time))
     return
 
+def unscout(world,exp):
+    sel="""
+    SELECT time from 'status'
+    WHERE worldid=? AND expansion=? AND status!="Scouted" AND status!="Scouting" ORDER BY time DESC LIMIT 1
+    """
+    worldid=getworldid(world)
+    cursor.execute(sel,(worldid,exp))
+    r=cursor.fetchall()
+    if len(r)==0:
+        raise ValueError
+    time=r[0][0]
+    sel="""
+    DELETE from 'status'
+    WHERE worldid=? AND expansion=? AND (status="Scouted" OR status="Scouting") and TIME>?
+    """
+    cursor.execute(sel,(worldid,exp,time))
+    return cursor.rowcount
+
 def gethistory(world,exp,time=None):
     sel="""
     SELECT id,status,time from 'status'

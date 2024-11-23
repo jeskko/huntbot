@@ -9,7 +9,7 @@ import nuny.db_utils
 
 
 from nuny.sonar import sonar_speculate,sonar_mapping
-from nuny.log_utils import bot_log
+from nuny.log_utils import bot_log,scout_log
 
 async def groundskeeper():
     # check all statuses and update if timers say so
@@ -58,21 +58,36 @@ def set_status(world,status,expansion,time=None):
 def process_despawn(status,time):
     td=datetime.datetime.utcnow()-time
     ts=td.total_seconds()
+    start=0
+    end=0
     if status=="Dead":
         # spawn window starts at 3.5 hours (presuming that train takes 30 minutes)
         if ts>12600:
             status="Spawning"
+            start=ts-12600
+            end=21699-ts
+        else:
+            start=ts
+            end=12600-ts
 
     if status=="Rebooted":
         # spawn window starts at 2.4 hours after maintenance reboot
         if ts>8640:
             status="Spawning"
+            start=ts-8640
+            end=12960-ts
+        else:
+            start=ts
+            end=8640-ts
             
-    if status=="Up":
+    if status=="Up" or status=="Scouting" or status=="Scouted" or status=="Despawning":
         for d in nuny.config.conf["despawn"]:
             if ts>=d["start"] and ts<d["end"]:
-                status=d["status"]
-    return status        
+                if d["status"]!="Up":
+                    status=d["status"]
+                start=ts-d["start"]
+                end=d["end"]-ts
+    return status,start,end 
 
 def get_statuses(expansion):
     message=f"{expansion}.0 status:\n```"
@@ -80,7 +95,7 @@ def get_statuses(expansion):
     table.append(["Server","Status\nchanged","Status\nduration","Status"])
     for w in nuny.config.conf["worlds"]:
         (status,time)=nuny.db_utils.getstatus(w["name"],expansion)
-        status=process_despawn(status,time)
+        status=process_despawn(status,time)[0]
         if status=="Unknown":
             t1=""
         else:
@@ -166,47 +181,26 @@ def spec_delta(time,start_s,end_s,type):
     return msg
 
 def speculate(world,expansion):
-    """
-    Speculate about hunt marks and their spawn/despawn status.
-    https://cdn.discordapp.com/attachments/884351171668619265/972159569658789978/unknown.png
-    Also checks Sonar data about the selected world.
-    """
-    now=datetime.datetime.utcnow()
-    
     try:
         w=parse_world(world)
     except ValueError:
         return("Invalid world.")
-
+    
     status,time=nuny.db_utils.getstatus(w,expansion)
-    delta=now-time
+    status,start,end=process_despawn(status,time) 
+
+    start=delta_to_words(datetime.timedelta(seconds=start))
+    end=delta_to_words(datetime.timedelta(seconds=end))
 
     msg=f"Status **{status}** for **{w}** {expansion}.0 was set at {time}.\n"
-    if status=="Dead":
-        msg+=spec_delta(time,12600,21600,"spawn")
-    if status=="Rebooted":
-        msg+=spec_delta(time,8640,12960,"spawn")        
-    if status=="Up" or status=="Scouting" or status=="Scouted":
-        dur=now-time+datetime.timedelta(hours=0)
-        if int(dur.total_seconds())<86400:
-            msg+=spec_delta(time,77400,86400,"despawn")
-        else:
-            if int(dur.total_seconds())<108000:
-                msg+=spec_delta(time,91800,108000,"spawn")
-            else:
-                if int(dur.total_seconds())<194400:
-                    msg+=spec_delta(time,178200,194400,"despawn")
-                else:
-                    if int(dur.total_seconds())<216000:
-                        msg+=spec_delta(time,192600,216000,"spawn")
-                    else:
-                        if int(dur.total_seconds())<302400:
-                            msg+=spec_delta(time,279000,302400,"despawn")
-                        else:
-                            if int(dur.total_seconds())<324000:
-                                msg+=spec_delta(time,293400,324000,"spawn")
-                            else:
-                                msg+="Condition uncertain, try to run trains more often."
+    if status=="Up" or status=="Scouted" or status=="Scouting":
+        msg+=f"Marks are up and will start despawning in {end}.\n"
+    if status=="Dead" or status=="Rebooted" or status=="Despawned":
+        msg+=f"Marks have been despawned and will start spawning in {end}.\n"
+    if status=="Despawning":
+        msg+=f"Marks have started to despawn {start} ago and will be fully despawned in {end}.\n"
+    if status=="Spawning":
+        msg+=f"Marks have started to spawn {start} ago and will be fully spawned in {end}.\n"
     if nuny.config.conf["sonar"]["enable"]==True:
         msg+=sonar_speculate(w,expansion)
     return msg
@@ -305,7 +299,15 @@ async def update_channels():
             exp=e[0]
             chan=e[1]
             status,time=nuny.db_utils.getstatus(world,exp)
-            status=process_despawn(status,time)
+            if (status=="Scouted"):
+                sc=True
+            else:
+                sc=False
+            status=process_despawn(status,time)[0]
+            if (status=="Despawning" or status=="Despawned") and sc==True:
+                await scout_log(f"{world} {exp}.0 is now despawning and was scouted, resetting scouted status.")
+                r=nuny.db_utils.unscout(world,exp)
+                logging.info(f"Unscouting affected {r} rows.")
             await update_channel(chan,s_world,status)
     print("update channels done")
 
