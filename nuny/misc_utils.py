@@ -55,12 +55,32 @@ def set_status(world,status,expansion,time=None):
         raise ValueError("Untracked expansion")
     return
 
+def process_despawn(status,time):
+    td=datetime.datetime.utcnow()-time
+    ts=td.total_seconds()
+    if status=="Dead":
+        # spawn window starts at 3.5 hours (presuming that train takes 30 minutes)
+        if ts>12600:
+            status="Spawning"
+
+    if status=="Rebooted":
+        # spawn window starts at 2.4 hours after maintenance reboot
+        if ts>8640:
+            status="Spawning"
+            
+    if status=="Up":
+        for d in nuny.config.conf["despawn"]:
+            if ts>=d["start"] and ts<d["end"]:
+                status=d["status"]
+    return status        
+
 def get_statuses(expansion):
     message=f"{expansion}.0 status:\n```"
     table=[]
     table.append(["Server","Status\nchanged","Status\nduration","Status"])
     for w in nuny.config.conf["worlds"]:
         (status,time)=nuny.db_utils.getstatus(w["name"],expansion)
+        status=process_despawn(status,time)
         if status=="Unknown":
             t1=""
         else:
@@ -285,6 +305,7 @@ async def update_channels():
             exp=e[0]
             chan=e[1]
             status,time=nuny.db_utils.getstatus(world,exp)
+            status=process_despawn(status,time)
             await update_channel(chan,s_world,status)
     print("update channels done")
 

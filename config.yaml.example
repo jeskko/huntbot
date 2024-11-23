@@ -123,3 +123,35 @@ statuses:
   - name: Rebooted
     short: rebooted
     icon: 🔄
+  - name: Despawning
+    short: despawning
+    icon: 📉
+  - name : Despawned
+    short: despawned
+    icon: 💀
+  - name: Spawning
+    short: spawning
+    icon: 📈
+
+despawn:
+  - start: 77400
+    end: 86400
+    status: Despawning
+  - start: 86400
+    end: 91800
+    status: Despawned
+  - start: 91800
+    end: 108000
+    status: Spawning
+  - start: 178200
+    end: 192600
+    status: Despawning
+  - start: 192600
+    end: 216000
+    status: Spawning
+  - start: 279000
+    end: 293400
+    status: Despawning
+    start: 293400
+    end: 324000
+    status: Spawning
