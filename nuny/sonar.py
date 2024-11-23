@@ -213,12 +213,12 @@ def sonar_mapping(w,expansion=7):
             6: ''}
     
     ilong={0: '',
-        1: '  (Instance ONE)',
-        2: '  (Instance TWO)',
-        3: '  (Instance THREE)',
-        4: '  (Instance FOUR)',
-        5: '  (Instance FIVE)',
-        6: '  (Instance SIX)'}
+        1: '  (I1)',
+        2: '  (I2)',
+        3: '  (I3)',
+        4: '  (I4)',
+        5: '  (I5)',
+        6: '  (I6)'}
     
     sel="""
 SELECT hunts.name, zones.name,hunt.instanceid, 

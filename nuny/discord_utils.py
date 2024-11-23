@@ -88,6 +88,10 @@ async def update_message(world,expansion,text):
     channel=w["channels"][expansion]
     msg_id=nuny.state.state["statuses"][channel]
     chan=bot.get_channel(channel)
+
+    if len(text)>1999:
+        text=text[0:1980]+"\n[TRUNCATED]```"
+
     try: 
         msg=await chan.fetch_message(msg_id)
     except discord.errors.NotFound:
