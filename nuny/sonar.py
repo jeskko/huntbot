@@ -237,6 +237,60 @@ ORDER BY hunt.zoneid,hunt.instanceid
         msg+=f"({l[0]}) {l[1]}{ishort[l[2]]} ( {l[3]} , {l[4]} ){ilong[l[2]]}\n"
     msg+="```"
     return msg
+
+def sonar_health(w,expansion=7):
+    try:
+        exp=int(expansion)
+    except:
+        raise ValueError("Invalid non-numeric expansion")
+    if (exp<2 or exp>7):
+                raise ValueError("Invalid expansion")
+    
+    
+    ishort={0: '',
+            1: '',
+            2: '',
+            3: '',
+            4: '',
+            5: '',
+            6: ''}
+    
+    ilong={0: '',
+        1: '  (I1)',
+        2: '  (I2)',
+        3: '  (I3)',
+        4: '  (I4)',
+        5: '  (I5)',
+        6: '  (I6)'}
+    
+    sel="""
+SELECT hunts.name, zones.name,hunt.instanceid, 
+    round(((41 / zones.scale) * (((hunt.x + zones.offset_x)*zones.scale + 1024) / 2048)+1),1),
+    round(((41 / zones.scale) * (((hunt.y + zones.offset_y)*zones.scale + 1024) / 2048)+1),1), lastseen from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+INNER JOIN zones on zones.id=hunt.zoneid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastseen > datetime('now','-20 hours') AND lastfound > datetime('now','-20 hours') AND currenthp != 0
+ORDER BY hunt.zoneid,hunt.instanceid
+        """
+    nuny.db_utils.cursor.execute(sel,(exp-1,w))
+    h=nuny.db_utils.cursor.fetchall()
+    msg="Sonar data suggests following hunt health status:\n```\n"
+    for l in h:
+        td=datetime.datetime.utcnow()-l[5]
+        td_h=td.seconds//3600
+        td_m=(td.seconds//60%60)
+        msg+=f"{l[0]}: last seen {td_h:02d}:{td_m:02d} ago{ilong[l[2]]}\n"
+    msg+="```"
+    return msg
+        
+def sonarreset(timestamp):
+    sel="""
+DELETE FROM hunt 
+WHERE lastfound < ?
+    """
+    nuny.db_utils.cursor.execute(sel,(timestamp,))
+    return nuny.db_utils.cursor.rowcount
         
 def sonar_stats(world,exp):
     # statistics 

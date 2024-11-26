@@ -8,7 +8,7 @@ import nuny.discord_utils
 import nuny.db_utils
 
 
-from nuny.sonar import sonar_speculate,sonar_mapping
+from nuny.sonar import sonar_speculate,sonar_mapping,sonar_health
 from nuny.log_utils import bot_log,scout_log
 
 async def groundskeeper():
@@ -217,6 +217,20 @@ def mapping(world,expansion):
     else:
         msg="Sonar is disabled for this bot, unable to do mapping."
     return msg
+
+def health(world,expansion):
+    """Fetches last seen data from Sonar."""
+    if nuny.config.conf["sonar"]["enable"]==True:
+        
+        try:
+            w=parse_world(world)
+        except ValueError:
+            return(f"Invalid world {world}.")  
+        msg=sonar_health(w,expansion)
+    else:
+        msg="Sonar is disabled for this bot, unable to do mapping."
+    return msg
+
  
 def parse_parameters(time,expansion):
     """

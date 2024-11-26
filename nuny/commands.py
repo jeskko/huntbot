@@ -6,9 +6,8 @@ import nuny.db_utils
 import nuny.discord_utils
 
 from nuny.log_utils import bot_log,scout_log
-from nuny.misc_utils import speculate,mapping,parse_parameters,parse_world,set_status,get_statuses,get_history,maintenance_reboot
-from nuny.sonar import sonar_stats
-
+from nuny.misc_utils import speculate,mapping,health,parse_parameters,parse_world,set_status,get_statuses,get_history,maintenance_reboot
+from nuny.sonar import sonar_stats,sonarreset
 async def log_cmd(ctx):
     await bot_log(f"{ctx.message.author.display_name} {ctx.message.channel.name}:  {ctx.message.content}")
 
@@ -27,13 +26,28 @@ async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
     await ctx.send(msg)
 
 @nuny.discord_utils.bot.command(name='mapping', aliases=["map",], help='Check mapping data from Sonar')
-async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
+async def map(ctx,world,expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
     await log_cmd(ctx)
     try:
         msg=mapping(world, expansion)
+    except ValueError as ex:
+        await ctx.message.add_reaction("❓")
+        await ctx.send(ex)
+        return()
+    await ctx.message.add_reaction("✅")
+    await ctx.send(msg)
+
+@nuny.discord_utils.bot.command(name='health', help='Check last seen data from Sonar')
+async def hlth(ctx,world,expansion=nuny.config.conf["def_exp"]):
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+
+    await log_cmd(ctx)
+    try:
+        msg=health(world, expansion)
     except ValueError as ex:
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
@@ -228,6 +242,34 @@ async def reboot(ctx,time):
         await msg1.delete()
         await ctx.message.add_reaction("✅")
         await ctx.send(f"All servers adjusted for server reboot at {time}.")
+
+@nuny.discord_utils.bot.command(name="sonarcleanup",help="Clean up sonar data that is older than parameter time.")
+async def sonarboot(ctx,time):
+
+    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        return
+    await log_cmd(ctx)
+    time,exp=parse_parameters(time,7)
+
+    msg1=await ctx.send(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
+
+    try:
+        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
+    except asyncio.TimeoutError:
+        logging.debug("Timed out while waiting for reaction.")
+        await msg1.delete()
+        await ctx.message.add_reaction('❌')
+        
+    else:
+        sonarreset(time)
+        await msg1.delete()
+        await ctx.message.add_reaction("✅")
+        await ctx.send(f"All sonar data older than {time} removed.")
+ 
 
 @nuny.discord_utils.bot.command(name="cleanup",help="Manually clean up over 7 days old statuses.")
 async def cleanup(ctx):
