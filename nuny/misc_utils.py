@@ -80,7 +80,7 @@ def process_despawn(status,time):
             start=ts
             end=8640-ts
             
-    if status=="Up" or status=="Scouting" or status=="Scouted" or status=="Despawning":
+    if status=="Up" or status=="Scouting" or status == "Spawning" or status=="Despawning":
         for d in nuny.config.conf["despawn"]:
             if ts>=d["start"] and ts<d["end"]:
                 if d["status"]!="Up":
@@ -322,6 +322,8 @@ async def update_channels():
                 await scout_log(f"{world} {exp}.0 is now despawning and was scouted, resetting scouted status.")
                 r=nuny.db_utils.unscout(world,exp)
                 logging.info(f"Unscouting affected {r} rows.")
+            if status=="Spawning" and sc==True:
+                status="Scouted"
             await update_channel(chan,s_world,status)
     print("update channels done")
 
