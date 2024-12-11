@@ -79,14 +79,18 @@ def process_despawn(status,time):
         else:
             start=ts
             end=8640-ts
-            
+        sc=False    
+    if status=="Scouted":
+        sc=True
     if status=="Up" or status=="Scouting" or status == "Scouted" or status=="Despawning":
         for d in nuny.config.conf["despawn"]:
             if ts>=d["start"] and ts<d["end"]:
-                if d["status"]!="Up" and d["status"]!="Scouted":
+                if d["status"]!="Up":
                     status=d["status"]
                 start=ts-d["start"]
                 end=d["end"]-ts
+        if status=="Spawning" and sc==True:
+            status="Scouted"
     return status,start,end 
 
 def get_statuses(expansion):
