@@ -79,7 +79,7 @@ def process_despawn(status,time):
         else:
             start=ts
             end=8640-ts
-        sc=False    
+    sc=False    
     if status=="Scouted":
         sc=True
     if status=="Up" or status=="Scouting" or status == "Scouted" or status=="Despawning":
