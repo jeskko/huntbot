@@ -358,7 +358,8 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
             
             if expansion in range(5,8):
                 set_status(world,"Running",expansion)
-
+            await ctx.send(f"Messages for **[{world}]** {expansion}.0 train sent. Train start scheduled <t:{timestamp}:R>.")
+            
             await msg1.delete()
             await ctx.message.add_reaction('✅')
 
@@ -427,4 +428,4 @@ async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
 
             await msg1.delete()
             await ctx.message.add_reaction('✅')
-            await scout_log("Please set the server running manually if needed.")
+            await scout_log("Messages sent.")
