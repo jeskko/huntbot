@@ -3,7 +3,6 @@ aiohttp==3.13.2
 aiosignal==1.4.0
 async-timeout==5.0.1
 attrs==25.4.0
-audioop-lts==0.2.1
 cachetools==6.2.1
 certifi==2025.11.12
 charset-normalizer==3.4.4
