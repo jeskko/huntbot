@@ -110,7 +110,7 @@ def get_statuses(expansion):
         if t2_h<0:
             t2=""
         else:
-            if t2_h>168:
+            if t2_h>240:
                 t2="long"                
             else:
                 t2=f"{t2_h}:{t2_m:02d}"
