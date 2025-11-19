@@ -5,6 +5,8 @@ import nuny.config
 import nuny.db_utils
 import nuny.discord_utils
 
+from discord import app_commands
+
 from nuny.log_utils import bot_log,scout_log
 from nuny.misc_utils import speculate,mapping,health,parse_parameters,parse_world,set_status,get_statuses,get_history,maintenance_reboot
 from nuny.sonar import sonar_stats,sonarreset
@@ -143,8 +145,30 @@ async def endtrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"])
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
 
+@nuny.discord_utils.bot.tree.command(name="status", description="Get train status", guild=nuny.discord_utils.guild)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=[
+    app_commands.Choice(name="DT", value=7),
+    app_commands.Choice(name="EW", value=6),
+    app_commands.Choice(name="SHB", value=5)])
+async def getstatus_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int]):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: status {expansion}")
+    try:
+        if int(expansion.value) in range(5,8):
+            msg=get_statuses(expansion.value)
+            await interaction.response.send_message(msg)
+        else:
+            await interaction.response.send_message("Invalid expansion")
+    except ValueError:
+        await interaction.response.send_message("Invalid expansion")
+
+
 @nuny.discord_utils.bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
-async def getstatus(ctx, expansion=nuny.config.conf["def_exp"]):
+async def getstatus_cmd(ctx, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
