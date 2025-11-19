@@ -8,6 +8,7 @@ import nuny.discord_utils
 from nuny.log_utils import bot_log,scout_log
 from nuny.misc_utils import speculate,mapping,health,parse_parameters,parse_world,set_status,get_statuses,get_history,maintenance_reboot
 from nuny.sonar import sonar_stats,sonarreset
+
 async def log_cmd(ctx):
     await bot_log(f"{ctx.message.author.display_name} {ctx.message.channel.name}:  {ctx.message.content}")
 
@@ -330,9 +331,13 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
     if expansion in range(2,5):
         msg=f"About to send this notification to various servers: ```@Old_train_role **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
         
-
-    msg1=await ctx.send(msg)
-    await msg1.add_reaction("✅")
+    try:  
+        msg1=await ctx.send(msg)
+        await msg1.add_reaction("✅")
+    except (nuny.discord_utils.commands.errors.CommandInvokeError, nuny.discord_utils.discord.errors.HTTPException) as exc:
+        await ctx.message.add_reaction('❌')
+        await ctx.send(f"Error sending preview: {exc}")
+        return
 
     def check(reaction, user):
         return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
@@ -343,6 +348,7 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
         logging.debug("Timed out while waiting for reaction.")
         await msg1.delete()
         await ctx.message.add_reaction('❌')
+    
         
     else:
         if res:
@@ -393,16 +399,21 @@ async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
         return
 
     if expansion==7:
-        msg=f"About to send this notification to various servers: ```@Dawntrail_role {message} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Dawntrail_role {message} (Conductor: {username}).``` React with ✅ to send or wait 30 seconds to cancel."
     if expansion==6:
-        msg=f"About to send this notification to various servers: ```@Endwalker_role {message} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Endwalker_role {message} (Conductor: {username}).``` React with ✅ to send or wait 30 seconds to cancel."
     if expansion==5:
-        msg=f"About to send this notification to various servers: ```@Shadowbringers_role {message} (Conductor: {username}).```Also I will set the server to *running* state. React with ✅ to send or wait 30 seconds to cancel."
+        msg=f"About to send this notification to various servers: ```@Shadowbringers_role {message} (Conductor: {username}).``` React with ✅ to send or wait 30 seconds to cancel."
     if expansion in range(2,5):
         msg=f"About to send this notification to various servers: ```@Old_train_role {message} (Conductor: {username}).```React with ✅ to send or wait 30 seconds to cancel."
-        
-    msg1=await ctx.send(msg)
-    await msg1.add_reaction("✅")
+    
+    try:  
+        msg1=await ctx.send(msg)
+        await msg1.add_reaction("✅")
+    except (nuny.discord_utils.commands.errors.CommandInvokeError, nuny.discord_utils.discord.errors.HTTPException) as exc:
+        await ctx.message.add_reaction('❌')
+        await ctx.send(f"Error sending preview: {exc}")
+        return
 
     def check(reaction, user):
         return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id

@@ -5,7 +5,7 @@ import nuny.discord_utils
 
 async def bot_log(msg):
     """Send message on bot log channel."""
-    
+    if len(msg)>2000: msg=msg[0:1999]
     try:
         await nuny.discord_utils.bot.get_channel(nuny.config.conf["discord"]["channels"]["log"]).send(msg)
     except discord.errors.DiscordServerError as e:
