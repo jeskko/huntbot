@@ -13,6 +13,15 @@ from nuny.log_utils import bot_log,scout_log
 from nuny.misc_utils import speculate,mapping,health,parse_parameters,parse_world,set_status,get_statuses,get_history,maintenance_reboot
 from nuny.sonar import sonar_stats,sonarreset
 
+worldchoices=[]     
+for w in nuny.config.conf["worlds"]:
+    worldchoices.append(app_commands.Choice(name=w["name"], value=w["short"][0]))
+
+expansionchoices=[
+    app_commands.Choice(name="DT", value=7),
+    app_commands.Choice(name="EW", value=6),
+    app_commands.Choice(name="SHB", value=5)]
+
 async def log_cmd(ctx):
     await bot_log(f"{ctx.message.author.display_name} {ctx.message.channel.name}:  {ctx.message.content}")
 
@@ -102,8 +111,42 @@ async def scoutend(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
 
+@nuny.discord_utils.bot.tree.command(name="run", description='Start train.\n Time can be manually set in form "+15" (minutes) or "15:24" (server time)', guild=nuny.discord_utils.guild)
+@app_commands.describe(world="World")
+@app_commands.choices(world=worldchoices)
+@app_commands.describe(time="Start time (optional)")
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=expansionchoices)
+async def begintrain_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], time: str | None, expansion: app_commands.Choice[int]):
+
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: end: {world.value} {expansion.value} {time}")
+
+    try:
+        world=parse_world(world.value)
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message("Invalid world.", ephemeral=True)
+        return()
+
+    if time != None:
+        timetext=f" at time {time}"
+    else:
+        timetext=""
+
+    try:
+        set_status(world,"Running",expansion.value,time)
+        await interaction.response.send_message(f"{world} {expansion.name} set to running{timetext}.")
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
+
+
 @nuny.discord_utils.bot.command(name='start', aliases=['begin','run','go'],help='Start train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
-async def begintrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"]):
+async def begintrain_cmd(ctx, world, time=None, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
@@ -123,19 +166,12 @@ async def begintrain(ctx, world, time=None, expansion=nuny.config.conf["def_exp"
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
    
-worldchoices=[]     
-for w in nuny.config.conf["worlds"]:
-    worldchoices.append(app_commands.Choice(name=w["name"], value=w["short"][0]))
-
 @nuny.discord_utils.bot.tree.command(name="end", description="End train", guild=nuny.discord_utils.guild)
 @app_commands.describe(world="World")
 @app_commands.choices(world=worldchoices)
 @app_commands.describe(time="End time (optional)")
 @app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=[
-    app_commands.Choice(name="DT", value=7),
-    app_commands.Choice(name="EW", value=6),
-    app_commands.Choice(name="SHB", value=5)])
+@app_commands.choices(expansion=expansionchoices)
 async def endtrain_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], time: str | None, expansion: app_commands.Choice[int]):
 
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
@@ -146,10 +182,10 @@ async def endtrain_tree(interaction: nuny.discord_utils.discord.Interaction, wor
 
     try:
         world=parse_world(world.value)
-    except ValueError:
-        await interaction.response.send_message("Invalid world.")
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message("Invalid world.", ephemeral=True)
         return()
-    print(time)
     try:
         set_status(world,"Dead",expansion.value,time)
         if time != None:
@@ -161,7 +197,9 @@ async def endtrain_tree(interaction: nuny.discord_utils.discord.Interaction, wor
         else:
             await interaction.response.send_message(f"{world} {expansion.name} set to Dead{timetext}.")
     except ValueError as ex:
-        await interaction.response.send_message(f"Error: {ex}")
+        await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
+        await bot_log(f"ValueError: {ex}")
+
 
 @nuny.discord_utils.bot.command(name='end', aliases=['done','dead','finish'],help='Finish train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
 async def endtrain_cmd(ctx, world, time=None, expansion=nuny.config.conf["def_exp"]):
@@ -189,25 +227,22 @@ async def endtrain_cmd(ctx, world, time=None, expansion=nuny.config.conf["def_ex
 
 @nuny.discord_utils.bot.tree.command(name="status", description="Get train status", guild=nuny.discord_utils.guild)
 @app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=[
-    app_commands.Choice(name="DT", value=7),
-    app_commands.Choice(name="EW", value=6),
-    app_commands.Choice(name="SHB", value=5)])
-async def getstatus_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int]):
+@app_commands.choices(expansion=expansionchoices)
+async def getstatus_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int], silent: bool = False):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
         return
 
-    await bot_log(f"{interaction.user.display_name}: status {expansion}")
+    await bot_log(f"{interaction.user.display_name}: status {expansion.value}")
     try:
         if int(expansion.value) in range(5,8):
             msg=get_statuses(expansion.value)
-            await interaction.response.send_message(msg)
+            await interaction.response.send_message(msg, ephemeral = silent)
         else:
-            await interaction.response.send_message("Invalid expansion")
-    except ValueError:
-        await interaction.response.send_message("Invalid expansion")
-
+            await interaction.response.send_message("Invalid expansion", ephemeral = True)
+    except ValueError as ex:
+        await interaction.response.send_message(f"Error: {ex}", ephemeral = True)
+        await bot_log(f"ValueError: {ex}")
 
 @nuny.discord_utils.bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
 async def getstatus_cmd(ctx, expansion=nuny.config.conf["def_exp"]):
