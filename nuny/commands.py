@@ -25,8 +25,28 @@ expansionchoices=[
 async def log_cmd(ctx):
     await bot_log(f"{ctx.message.author.display_name} {ctx.message.channel.name}:  {ctx.message.content}")
 
+@nuny.discord_utils.bot.tree.command(name="speculate", description='Speculate about status of a certain world', guild=nuny.discord_utils.guild)
+@app_commands.describe(world="World")
+@app_commands.choices(world=worldchoices)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=expansionchoices)
+async def spec_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int], silent: bool = False):
+
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+
+    if expansion.value in range(5,8):
+        msg=speculate(world.value,expansion.value)
+    else:
+        await interaction.response.send_message("Untracked expansion", ephemeral=True)
+        return
+    await interaction.response.send_message(msg,ephemeral=silent)
+
 @nuny.discord_utils.bot.command(name='speculate',help='Speculate about status of a certain world')
-async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
+async def spec_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await log_cmd(ctx)
@@ -39,8 +59,30 @@ async def spec(ctx,world,expansion=nuny.config.conf["def_exp"]):
     await ctx.message.add_reaction("✅")
     await ctx.send(msg)
 
+@nuny.discord_utils.bot.tree.command(name="map", description='Check mapping data from Sonar', guild=nuny.discord_utils.guild)
+@app_commands.describe(world="World")
+@app_commands.choices(world=worldchoices)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=expansionchoices)
+async def map_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int], silent: bool = False):
+
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+
+    try:
+        msg=mapping(world.value, expansion.value)
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message("Invalid world.", ephemeral=True)
+        return()
+
+    await interaction.response.send_message(msg, ephemeral=silent)
+
 @nuny.discord_utils.bot.command(name='mapping', aliases=["map",], help='Check mapping data from Sonar')
-async def map(ctx,world,expansion=nuny.config.conf["def_exp"]):
+async def map_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
@@ -54,8 +96,30 @@ async def map(ctx,world,expansion=nuny.config.conf["def_exp"]):
     await ctx.message.add_reaction("✅")
     await ctx.send(msg)
 
+@nuny.discord_utils.bot.tree.command(name="health", description='Check last seen data from Sonar', guild=nuny.discord_utils.guild)
+@app_commands.describe(world="World")
+@app_commands.choices(world=worldchoices)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=expansionchoices)
+async def hlth_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int], silent: bool = False):
+
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+
+    try:
+        msg=health(world.value, expansion.value)
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message("Invalid world.", ephemeral=True)
+        return()
+
+    await interaction.response.send_message(msg, ephemeral=silent)
+
 @nuny.discord_utils.bot.command(name='health', help='Check last seen data from Sonar')
-async def hlth(ctx,world,expansion=nuny.config.conf["def_exp"]):
+async def hlth_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
@@ -69,8 +133,35 @@ async def hlth(ctx,world,expansion=nuny.config.conf["def_exp"]):
     await ctx.message.add_reaction("✅")
     await ctx.send(msg)
 
+@nuny.discord_utils.bot.tree.command(name="scout", description='Begin scouting', guild=nuny.discord_utils.guild)
+@app_commands.describe(world="World")
+@app_commands.choices(world=worldchoices)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=expansionchoices)
+async def scouting_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int]):
+
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+
+    try:
+        world=parse_world(world.value)
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message("Invalid world.", ephemeral=True)
+        return()
+
+    try:
+        set_status(world,"Scouting",expansion.value,"last")
+        await interaction.response.send_message(f"{world} {expansion.name} scouting started.")
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
+
 @nuny.discord_utils.bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.')
-async def scouting(ctx, world, expansion=nuny.config.conf["def_exp"]):
+async def scouting_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
@@ -90,8 +181,35 @@ async def scouting(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
 
+@nuny.discord_utils.bot.tree.command(name="scend", description='End scouting', guild=nuny.discord_utils.guild)
+@app_commands.describe(world="World")
+@app_commands.choices(world=worldchoices)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=expansionchoices)
+async def scoutend_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int]):
+
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+
+    try:
+        world=parse_world(world.value)
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message("Invalid world.", ephemeral=True)
+        return()
+
+    try:
+        set_status(world,"Scouted",expansion.value,"last")
+        await interaction.response.send_message(f"{world} {expansion.name} scouting complete.")
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
+
 @nuny.discord_utils.bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.')
-async def scoutend(ctx, world, expansion=nuny.config.conf["def_exp"]):
+async def scoutend_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
