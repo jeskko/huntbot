@@ -36,7 +36,7 @@ async def spec_tree(interaction: nuny.discord_utils.discord.Interaction, world: 
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
         return
 
-    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+    await bot_log(f"{interaction.user.display_name}: speculate: {world.value} {expansion.value}")
 
     if expansion.value in range(5,8):
         msg=speculate(world.value,expansion.value)
@@ -70,7 +70,7 @@ async def map_tree(interaction: nuny.discord_utils.discord.Interaction, world: a
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
         return
 
-    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+    await bot_log(f"{interaction.user.display_name}: mapping: {world.value} {expansion.value}")
 
     try:
         msg=mapping(world.value, expansion.value)
@@ -107,7 +107,7 @@ async def hlth_tree(interaction: nuny.discord_utils.discord.Interaction, world: 
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
         return
 
-    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+    await bot_log(f"{interaction.user.display_name}: health: {world.value} {expansion.value}")
 
     try:
         msg=health(world.value, expansion.value)
@@ -144,7 +144,7 @@ async def scouting_tree(interaction: nuny.discord_utils.discord.Interaction, wor
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
         return
 
-    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
+    await bot_log(f"{interaction.user.display_name}: scout: {world.value} {expansion.value}")
 
     try:
         world=parse_world(world.value)
@@ -241,7 +241,7 @@ async def begintrain_tree(interaction: nuny.discord_utils.discord.Interaction, w
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
         return
 
-    await bot_log(f"{interaction.user.display_name}: end: {world.value} {expansion.value} {time}")
+    await bot_log(f"{interaction.user.display_name}: start: {world.value} {expansion.value} {time}")
 
     try:
         world=parse_world(world.value)
@@ -379,8 +379,32 @@ async def getstatus_cmd(ctx, expansion=nuny.config.conf["def_exp"]):
     except ValueError:
         await ctx.send("Invalid expansion")
 
+@nuny.discord_utils.bot.tree.command(name="history", description="Get command history for a world", guild=nuny.discord_utils.guild)
+@app_commands.describe(world="World")
+@app_commands.choices(world=worldchoices)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=expansionchoices)
+async def getstatus_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int], world: app_commands.Choice[str], silent: bool = False):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: history {expansion.value} {world.value}")
+    try:
+        world=parse_world(world.value)
+    except ValueError as ex:
+        await interaction.response.send_message(f"Error: {ex}", ephemeral = True)
+        await bot_log(f"ValueError: {ex}")
+        return
+    
+    if expansion.value in range(5,8):
+        msg=get_history(world,expansion.value)
+        await interaction.response.send_message(msg, ephemeral = silent)
+    else:
+        await interaction.response.send_message("Invalid expansion",ephemeral=True)
+
 @nuny.discord_utils.bot.command(name="history", aliases=['hist'],help='Get status history')
-async def gethistory(ctx, world, expansion=nuny.config.conf["def_exp"]):
+async def gethistory_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await log_cmd(ctx)
@@ -400,8 +424,20 @@ async def gethistory(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Invalid expansion")
         await ctx.message.add_reaction("❓")
 
+@nuny.discord_utils.bot.tree.command(name="undo", description="Undo a previous status", guild=nuny.discord_utils.guild)
+@app_commands.describe(status="Status ID")
+async def undo_tree(interaction: nuny.discord_utils.discord.Interaction, status: int):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: undo {status}")
+
+    nuny.db_utils.delstatus(status)
+    interaction.response.send_message(f"Status #{status} deleted.")
+
 @nuny.discord_utils.bot.command(name="undo",help="Undo a previous status.")
-async def undo(ctx,id):
+async def undo_cmd(ctx,id):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
@@ -416,9 +452,22 @@ async def undo(ctx,id):
 
     nuny.db_utils.delstatus(id)
     await ctx.message.add_reaction("✅")
+
+@nuny.discord_utils.bot.tree.command(name="adjust", description="Adjust timestamp of a previous status.", guild=nuny.discord_utils.guild)
+@app_commands.describe(status="Status ID")
+async def adjust_tree(interaction: nuny.discord_utils.discord.Interaction, status: int, time: str):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: adjust {status} {time}")
+
+    time,exp=parse_parameters(time,7)
+    nuny.db_utils.settime(status,time)
+    interaction.response.send_message(f"Status #{status} adjusted to {time}.")
     
 @nuny.discord_utils.bot.command(name="adjust",aliases=['fix'],help="Adjust timestamp of a previous status.")
-async def adjust(ctx,id,time):
+async def adjust_cmd(ctx,id,time):
 
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
