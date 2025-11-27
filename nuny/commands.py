@@ -5,6 +5,8 @@ import nuny.config
 import nuny.db_utils
 import nuny.discord_utils
 
+import aiohttp
+
 from typing import Optional
 
 from discord import app_commands
@@ -841,7 +843,7 @@ async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
     
     shoutbox.add_item(wlabel)    
 
-    mbox=nuny.discord_utils.discord.ui.TextInput(label="Message", placeholder="Advertisement message", required=True, style=nuny.discord_utils.discord.TextStyle.paragraph)
+    mbox=nuny.discord_utils.discord.ui.TextInput(label="Message", placeholder="Advertisement message (any non-standard emojis in 'forced' mode)", required=True, style=nuny.discord_utils.discord.TextStyle.paragraph)
 
     shoutbox.add_item(mbox)
     
@@ -871,9 +873,16 @@ async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
             timestamp=int(mktime(tenmin.timetuple()))
             msg=f"**[{wname}]** Hunt train starting <t:{timestamp}:R> at {message} (Conductor: {username})."
 
-        await modal_interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅ or wait for timeout.\n\n**@{expansion}.0A** "+msg)
+        await modal_interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅ or wait for timeout.")
         msg1= await modal_interaction.original_response()
         await msg1.add_reaction("✅")
+        
+        async with aiohttp.ClientSession() as session:
+            webhook=nuny.discord_utils.discord.Webhook.from_url(nuny.config.conf["discord"]["preview_webhook"], session=session)
+            try:
+                await webhook.send(content=f"**@{expansion}.0A** "+msg,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")                        
+            except (nuny.discord_utils.discord.errors.HTTPException,nuny.discord_utils.discord.errors.NotFound) as e:
+                pass
 
         def check(reaction, user):
             return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
@@ -886,9 +895,8 @@ async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
             await msg1.clear_reactions()
         else:
             if res:
-                
                 timestamp=int(mktime(datetime.datetime.now().timetuple()))
-                
+                await bot_log(f"Sending train advertisement:\n```{msg}```")
                 await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
 
                 if world != None:
