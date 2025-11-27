@@ -442,7 +442,7 @@ async def undo_tree(interaction: nuny.discord_utils.discord.Interaction, status:
     await bot_log(f"{interaction.user.display_name}: undo {status}")
 
     nuny.db_utils.delstatus(status)
-    interaction.response.send_message(f"✅ Status #{status} deleted.")
+    await interaction.response.send_message(f"✅ Status #{status} deleted.")
 
 @nuny.discord_utils.bot.command(name="undo",help="Undo a previous status.")
 async def undo_cmd(ctx,id):
@@ -558,8 +558,12 @@ async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, ti
         return
 
     await bot_log(f"{interaction.user.display_name}: sonarcleanup {time}")
-
-    time,exp=parse_parameters(time,7)
+    
+    try:
+        time,exp=parse_parameters(time,7)
+    except ValueError:
+        await interaction.response.send_message("❌ invalid time value.")
+        return
 
     await interaction.response.send_message(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
     msg1= await interaction.original_response()
@@ -586,7 +590,12 @@ async def sonarboot_cmd(ctx,time):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await log_cmd(ctx)
-    time,exp=parse_parameters(time,7)
+    try:
+        time,exp=parse_parameters(time,7)
+    except ValueError:
+        await ctx.message.add_reaction("❓")
+        await ctx.send("Invalid time.")
+        return()
 
     msg1=await ctx.send(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
     await msg1.add_reaction("✅")
@@ -630,63 +639,6 @@ async def cleanup_cmd(ctx):
     r=nuny.db_utils.cleanup()
     await ctx.send(f"{r} entries were deleted.")
     await ctx.message.add_reaction("✅")
-
-@nuny.discord_utils.bot.tree.command(name="shout", description="Advertise your train.", guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=allexpansionchoices)
-@app_commands.describe(start="Start location and train message")
-async def advertise_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int], world: app_commands.Choice[str], start: str):
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: shout {expansion.value} {world.value} {start}")
- 
-    username=interaction.user.display_name
-
-    if len(start)<6:
-        await interaction.response.send_message("❌ Start location needs to be over 5 characters.",ephemeral=True)
-        return
-
-    tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
-    timestamp=int(mktime(tenmin.timetuple()))
-
-    world=parse_world(world.value)
-
-    expansion=expansion.value
-    if expansion not in range(2,8):
-        await interaction.response.send_message("❌ Invalid expansion", ephemeral=True)
-        return
-
-    msg=f"**@{expansion}.0A** **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
-
-    await interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅.\n\n"+msg)
-    msg1= await interaction.original_response()
-    await msg1.add_reaction("✅")
-
-    def check(reaction, user):
-        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
-
-    try:
-        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
-    except asyncio.TimeoutError:
-        logging.debug("Timed out while waiting for reaction.")
-        await msg1.edit(content="❌ Timed out. Message not sent.")
-        await msg1.clear_reactions()
-    else:
-        if res:
-            
-            await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
-            
-            msg=f"**[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
-            await nuny.discord_utils.post_webhooks(msg,expansion)
-            
-            if expansion in range(5,8):
-                set_status(world,"Running",expansion)
-            await msg1.edit(content=f"✅ Messages for {username}'s **[{world}]** {expansion}.0 train sent. Train start scheduled <t:{timestamp}:R>.")
-            await msg1.clear_reactions()
                 
 @nuny.discord_utils.bot.command(name="advertise", 
                                 aliases=['ad','shout','sh'],
@@ -773,56 +725,6 @@ async def advertise_cmd(ctx, world, start, expansion=nuny.config.conf["def_exp"]
             await msg1.delete()
             await ctx.message.add_reaction('✅')
 
-@nuny.discord_utils.bot.tree.command(name="mshout", description="Advertise your train, fully free message.", guild=nuny.discord_utils.guild)
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=allexpansionchoices)
-@app_commands.describe(message="Train message")
-async def madvertise_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int], message: str):
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: shout {expansion.value} {message}")
- 
-    username=interaction.user.display_name
-
-    if len(message)<11:
-        await interaction.response.send_message("❌ Message needs to be over 10 characters.",ephemeral=True)
-        return
-
-    expansion=expansion.value
-    if expansion not in range(2,8):
-        await interaction.response.send_message("❌ Invalid expansion", ephemeral=True)
-        return
-
-    msg=f"**@{expansion}.0A** {message} (Conductor: {username})."
-
-    await interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅.\n\n"+msg)
-    msg1= await interaction.original_response()
-    await msg1.add_reaction("✅")
-
-    def check(reaction, user):
-        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
-
-    try:
-        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
-    except asyncio.TimeoutError:
-        logging.debug("Timed out while waiting for reaction.")
-        await msg1.edit(content="❌ Timed out. Message not sent.")
-        await msg1.clear_reactions()
-    else:
-        if res:
-            
-            timestamp=int(mktime(datetime.datetime.now().timetuple()))
-            
-            await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
-            
-            msg=f"{message} (Conductor: {username})."
-            await nuny.discord_utils.post_webhooks(msg,expansion)
-            
-            await msg1.edit(content=f"✅ Messages for {username}'s {expansion}.0 train sent <t:{timestamp}:R>.")
-            await msg1.clear_reactions()
-
 @nuny.discord_utils.bot.command(name="advmanual", 
                                 aliases=['adm','mshout','msh'],
                                 help='''Advertise your train. 
@@ -894,3 +796,111 @@ async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
             await msg1.delete()
             await ctx.message.add_reaction('✅')
             await scout_log("Messages sent.")
+            
+@nuny.discord_utils.bot.tree.command(name="shout", description="Advertise your train.", guild=nuny.discord_utils.guild)
+async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: newshout")
+ 
+    username=interaction.user.display_name
+
+    worldch=[]     
+    for w in nuny.config.conf["worlds"]:
+        worldch.append(nuny.discord_utils.discord.SelectOption(label=w["name"], value=w["short"][0]))
+
+    expch=[
+        nuny.discord_utils.discord.SelectOption(label="DT", value=7),
+        nuny.discord_utils.discord.SelectOption(label="EW", value=6),
+        nuny.discord_utils.discord.SelectOption(label="SHB", value=5),
+        nuny.discord_utils.discord.SelectOption(label="STB", value=4),
+        nuny.discord_utils.discord.SelectOption(label="HW", value=3),
+        nuny.discord_utils.discord.SelectOption(label="ARR", value=2)]
+
+    shoutbox=nuny.discord_utils.discord.ui.Modal(title="Train advertisement")
+    
+    expselect=nuny.discord_utils.discord.ui.Select(options=expch,placeholder="Select Expansion",required=True,max_values=1)
+    async def expselect_callback(select_interaction: nuny.discord_utils.discord.Interaction):
+        await select_interaction.response.defer()
+        
+    expselect.callback=expselect_callback
+    
+    explabel=nuny.discord_utils.discord.ui.Label(text="Expansion",component=expselect)
+    
+    shoutbox.add_item(explabel)    
+
+    wselect=nuny.discord_utils.discord.ui.Select(options=worldch,placeholder="Select World",required=False)
+    async def wselect_callback(select_interaction: nuny.discord_utils.discord.Interaction):
+        await select_interaction.response.defer()
+        
+    wselect.callback=expselect_callback
+    
+    wlabel=nuny.discord_utils.discord.ui.Label(text="World",component=wselect,description="Leave empty if you want custom shout")
+    
+    shoutbox.add_item(wlabel)    
+
+    mbox=nuny.discord_utils.discord.ui.TextInput(label="Message", placeholder="Advertisement message", required=True, style=nuny.discord_utils.discord.TextStyle.paragraph)
+
+    shoutbox.add_item(mbox)
+    
+    async def on_submit(modal_interaction: nuny.discord_utils.discord.Interaction):
+        expansion = expselect.values[0]
+        if wselect.values:
+            world=wselect.values[0]
+            wname = list(filter(lambda w: w['short'][0] == world, nuny.config.conf["worlds"]))[0]["name"]
+        else:
+            world=None
+
+        message = mbox.value
+
+        if len(message)<11:
+            await modal_interaction.response.send_message("❌ Message needs to be over 10 characters.",ephemeral=True)
+            return
+
+        expansion=int(expansion)
+        if expansion not in range(2,8):
+            await modal_interaction.response.send_message("❌ Invalid expansion", ephemeral=True)
+            return
+
+        if world==None:
+            msg=f"{message} (Conductor: {username})."
+        else:
+            tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
+            timestamp=int(mktime(tenmin.timetuple()))
+            msg=f"**[{wname}]** Hunt train starting <t:{timestamp}:R> at {message} (Conductor: {username})."
+
+        await modal_interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅ or wait for timeout.\n\n**@{expansion}.0A** "+msg)
+        msg1= await modal_interaction.original_response()
+        await msg1.add_reaction("✅")
+
+        def check(reaction, user):
+            return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
+
+        try:
+            res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
+        except asyncio.TimeoutError:
+            logging.debug("Timed out while waiting for reaction.")
+            await msg1.edit(content="❌ Timed out. Message not sent.")
+            await msg1.clear_reactions()
+        else:
+            if res:
+                
+                timestamp=int(mktime(datetime.datetime.now().timetuple()))
+                
+                await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
+
+                if world != None:
+                    if expansion in range(5,8):
+                        set_status(world,"Running",expansion)
+                
+                await nuny.discord_utils.post_webhooks(msg,expansion)
+                
+                await msg1.edit(content=f"✅ Messages for {username}'s {expansion}.0 train sent <t:{timestamp}:R>.")
+                await msg1.clear_reactions()
+        
+    shoutbox.on_submit=on_submit
+       
+    await interaction.response.send_modal(shoutbox)
+ 
