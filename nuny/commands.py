@@ -484,9 +484,38 @@ async def adjust_cmd(ctx,id,time):
     time,exp=parse_parameters(time,7)
     nuny.db_utils.settime(id,time)
     await ctx.message.add_reaction("✅")
+
+@nuny.discord_utils.bot.tree.command(name="reboot", description="Set reboot timer after maintenance.", guild=nuny.discord_utils.guild)
+@app_commands.describe(time="Estimated server reset time (UTC)")
+async def reboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: reboot {time}")
+
+    time,exp=parse_parameters(time,7)
+
+    await interaction.response.send_message(f"About to reset all worlds maintenance end to time {time}. Confirm by reacting to this with a ✅.")
+    msg1= await interaction.original_response()
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
+
+    try:
+        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
+    except asyncio.TimeoutError:
+        logging.debug("Timed out while waiting for reaction.")
+        await msg1.edit(content="Timed out. Servers are not reset.")
+        await msg1.add_reaction('❌')
+        
+    else:
+        maintenance_reboot(time)
+        await msg1.edit(content=f"All servers adjusted for server reboot at {time}.")
     
 @nuny.discord_utils.bot.command(name="reboot",help="Set reboot timer after maintenance.")
-async def reboot(ctx,time):
+async def reboot_cmd(ctx,time):
 
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
@@ -512,8 +541,37 @@ async def reboot(ctx,time):
         await ctx.message.add_reaction("✅")
         await ctx.send(f"All servers adjusted for server reboot at {time}.")
 
+@nuny.discord_utils.bot.tree.command(name="sonarcleanup", description="Clean up sonar data that is older than parameter time.", guild=nuny.discord_utils.guild)
+@app_commands.describe(time="Time (UTC)")
+async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: sonarcleanup {time}")
+
+    time,exp=parse_parameters(time,7)
+
+    await interaction.response.send_message(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
+    msg1= await interaction.original_response()
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
+
+    try:
+        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
+    except asyncio.TimeoutError:
+        logging.debug("Timed out while waiting for reaction.")
+        await msg1.edit(content="Timed out. Sonar data not reset.")
+        await msg1.add_reaction('❌')
+        
+    else:
+        sonarreset(time)
+        await msg1.edit(content=f"All sonar data older than {time} removed.")
+
 @nuny.discord_utils.bot.command(name="sonarcleanup",help="Clean up sonar data that is older than parameter time.")
-async def sonarboot(ctx,time):
+async def sonarboot_cmd(ctx,time):
 
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
@@ -539,9 +597,20 @@ async def sonarboot(ctx,time):
         await ctx.message.add_reaction("✅")
         await ctx.send(f"All sonar data older than {time} removed.")
  
+@nuny.discord_utils.bot.tree.command(name="cleanup", description="Manually clean up over 7 days old statuses.", guild=nuny.discord_utils.guild)
+async def cleanup_tree(interaction: nuny.discord_utils.discord.Interaction):
+
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: cleanup")
+
+    r=nuny.db_utils.cleanup()
+    await interaction.response.send_message(f"{r} entries were deleted.")
 
 @nuny.discord_utils.bot.command(name="cleanup",help="Manually clean up over 7 days old statuses.")
-async def cleanup(ctx):
+async def cleanup_cmd(ctx):
 
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
