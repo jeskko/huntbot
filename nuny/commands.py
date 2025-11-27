@@ -22,6 +22,14 @@ expansionchoices=[
     app_commands.Choice(name="EW", value=6),
     app_commands.Choice(name="SHB", value=5)]
 
+allexpansionchoices=[
+    app_commands.Choice(name="DT", value=7),
+    app_commands.Choice(name="EW", value=6),
+    app_commands.Choice(name="SHB", value=5),
+    app_commands.Choice(name="STB", value=4),
+    app_commands.Choice(name="HW", value=3),
+    app_commands.Choice(name="ARR", value=2)]
+
 async def log_cmd(ctx):
     await bot_log(f"{ctx.message.author.display_name} {ctx.message.channel.name}:  {ctx.message.content}")
 
@@ -155,7 +163,7 @@ async def scouting_tree(interaction: nuny.discord_utils.discord.Interaction, wor
 
     try:
         set_status(world,"Scouting",expansion.value,"last")
-        await interaction.response.send_message(f"{world} {expansion.name} scouting started.")
+        await interaction.response.send_message(f"✅ {world} {expansion.name} scouting started.")
     except ValueError as ex:
         await bot_log(f"ValueError: {ex}")
         await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
@@ -203,7 +211,7 @@ async def scoutend_tree(interaction: nuny.discord_utils.discord.Interaction, wor
 
     try:
         set_status(world,"Scouted",expansion.value,"last")
-        await interaction.response.send_message(f"{world} {expansion.name} scouting complete.")
+        await interaction.response.send_message(f"✅ {world} {expansion.name} scouting complete.")
     except ValueError as ex:
         await bot_log(f"ValueError: {ex}")
         await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
@@ -257,7 +265,7 @@ async def begintrain_tree(interaction: nuny.discord_utils.discord.Interaction, w
 
     try:
         set_status(world,"Running",expansion.value,time)
-        await interaction.response.send_message(f"{world} {expansion.name} set to running{timetext}.")
+        await interaction.response.send_message(f"✅ {world} {expansion.name} set to running{timetext}.")
     except ValueError as ex:
         await bot_log(f"ValueError: {ex}")
         await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
@@ -311,9 +319,9 @@ async def endtrain_tree(interaction: nuny.discord_utils.discord.Interaction, wor
         else:
             timetext=""
         if nuny.config.conf["sonar"]["enable"]==True:
-            await interaction.response.send_message(f"{world} {expansion.name} set to Dead{timetext}.\n{sonar_stats(world,expansion.value)}")
+            await interaction.response.send_message(f"✅ {world} {expansion.name} set to Dead{timetext}.\n{sonar_stats(world,expansion.value)}")
         else:
-            await interaction.response.send_message(f"{world} {expansion.name} set to Dead{timetext}.")
+            await interaction.response.send_message(f"✅ {world} {expansion.name} set to Dead{timetext}.")
     except ValueError as ex:
         await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
         await bot_log(f"ValueError: {ex}")
@@ -434,7 +442,7 @@ async def undo_tree(interaction: nuny.discord_utils.discord.Interaction, status:
     await bot_log(f"{interaction.user.display_name}: undo {status}")
 
     nuny.db_utils.delstatus(status)
-    interaction.response.send_message(f"Status #{status} deleted.")
+    interaction.response.send_message(f"✅ Status #{status} deleted.")
 
 @nuny.discord_utils.bot.command(name="undo",help="Undo a previous status.")
 async def undo_cmd(ctx,id):
@@ -464,7 +472,7 @@ async def adjust_tree(interaction: nuny.discord_utils.discord.Interaction, statu
 
     time,exp=parse_parameters(time,7)
     nuny.db_utils.settime(status,time)
-    interaction.response.send_message(f"Status #{status} adjusted to {time}.")
+    interaction.response.send_message(f"✅ Status #{status} adjusted to {time}.")
     
 @nuny.discord_utils.bot.command(name="adjust",aliases=['fix'],help="Adjust timestamp of a previous status.")
 async def adjust_cmd(ctx,id,time):
@@ -507,12 +515,13 @@ async def reboot_tree(interaction: nuny.discord_utils.discord.Interaction, time:
         res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
         logging.debug("Timed out while waiting for reaction.")
-        await msg1.edit(content="Timed out. Servers are not reset.")
-        await msg1.add_reaction('❌')
+        await msg1.edit(content="❌ Timed out. Servers are not reset.")
+        await msg1.clear_reactions()
         
     else:
         maintenance_reboot(time)
-        await msg1.edit(content=f"All servers adjusted for server reboot at {time}.")
+        await msg1.edit(content=f"✅ All servers adjusted for server reboot at {time}.")
+        await msg1.clear_reactions()
     
 @nuny.discord_utils.bot.command(name="reboot",help="Set reboot timer after maintenance.")
 async def reboot_cmd(ctx,time):
@@ -563,12 +572,13 @@ async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, ti
         res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
         logging.debug("Timed out while waiting for reaction.")
-        await msg1.edit(content="Timed out. Sonar data not reset.")
-        await msg1.add_reaction('❌')
+        await msg1.edit(content="❌ Timed out. Sonar data not reset.")
+        await msg1.clear_reactions()
         
     else:
         sonarreset(time)
-        await msg1.edit(content=f"All sonar data older than {time} removed.")
+        await msg1.edit(content=f"✅ All sonar data older than {time} removed.")
+        await msg1.clear_reactions()
 
 @nuny.discord_utils.bot.command(name="sonarcleanup",help="Clean up sonar data that is older than parameter time.")
 async def sonarboot_cmd(ctx,time):
@@ -607,7 +617,7 @@ async def cleanup_tree(interaction: nuny.discord_utils.discord.Interaction):
     await bot_log(f"{interaction.user.display_name}: cleanup")
 
     r=nuny.db_utils.cleanup()
-    await interaction.response.send_message(f"{r} entries were deleted.")
+    await interaction.response.send_message(f"✅ {r} entries were deleted.")
 
 @nuny.discord_utils.bot.command(name="cleanup",help="Manually clean up over 7 days old statuses.")
 async def cleanup_cmd(ctx):
@@ -620,13 +630,70 @@ async def cleanup_cmd(ctx):
     r=nuny.db_utils.cleanup()
     await ctx.send(f"{r} entries were deleted.")
     await ctx.message.add_reaction("✅")
-    
+
+@nuny.discord_utils.bot.tree.command(name="shout", description="Advertise your train.", guild=nuny.discord_utils.guild)
+@app_commands.describe(world="World")
+@app_commands.choices(world=worldchoices)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=allexpansionchoices)
+@app_commands.describe(start="Start location and train message")
+async def advertise_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int], world: app_commands.Choice[str], start: str):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: shout {expansion.value} {world.value} {start}")
+ 
+    username=interaction.user.display_name
+
+    if len(start)<6:
+        await interaction.response.send_message("❌ Start location needs to be over 5 characters.",ephemeral=True)
+        return
+
+    tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
+    timestamp=int(mktime(tenmin.timetuple()))
+
+    world=parse_world(world.value)
+
+    expansion=expansion.value
+    if expansion not in range(2,8):
+        await interaction.response.send_message("❌ Invalid expansion", ephemeral=True)
+        return
+
+    msg=f"**@{expansion}.0A** **[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+
+    await interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅.\n\n"+msg)
+    msg1= await interaction.original_response()
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
+
+    try:
+        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
+    except asyncio.TimeoutError:
+        logging.debug("Timed out while waiting for reaction.")
+        await msg1.edit(content="❌ Timed out. Message not sent.")
+        await msg1.clear_reactions()
+    else:
+        if res:
+            
+            await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
+            
+            msg=f"**[{world}]** Hunt train starting <t:{timestamp}:R> at {start} (Conductor: {username})."
+            await nuny.discord_utils.post_webhooks(msg,expansion)
+            
+            if expansion in range(5,8):
+                set_status(world,"Running",expansion)
+            await msg1.edit(content=f"✅ Messages for {username}'s **[{world}]** {expansion}.0 train sent. Train start scheduled <t:{timestamp}:R>.")
+            await msg1.clear_reactions()
+                
 @nuny.discord_utils.bot.command(name="advertise", 
                                 aliases=['ad','shout','sh'],
                                 help='''Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). 
                                         Additionally will set the server status to running.''',
                                 ignore_extra=False)
-async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
+async def advertise_cmd(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
 
@@ -705,6 +772,56 @@ async def advertise(ctx, world, start, expansion=nuny.config.conf["def_exp"]):
             
             await msg1.delete()
             await ctx.message.add_reaction('✅')
+
+@nuny.discord_utils.bot.tree.command(name="mshout", description="Advertise your train, fully free message.", guild=nuny.discord_utils.guild)
+@app_commands.describe(expansion="Expansion")
+@app_commands.choices(expansion=allexpansionchoices)
+@app_commands.describe(message="Train message")
+async def madvertise_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int], message: str):
+    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
+        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        return
+
+    await bot_log(f"{interaction.user.display_name}: shout {expansion.value} {message}")
+ 
+    username=interaction.user.display_name
+
+    if len(message)<11:
+        await interaction.response.send_message("❌ Message needs to be over 10 characters.",ephemeral=True)
+        return
+
+    expansion=expansion.value
+    if expansion not in range(2,8):
+        await interaction.response.send_message("❌ Invalid expansion", ephemeral=True)
+        return
+
+    msg=f"**@{expansion}.0A** {message} (Conductor: {username})."
+
+    await interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅.\n\n"+msg)
+    msg1= await interaction.original_response()
+    await msg1.add_reaction("✅")
+
+    def check(reaction, user):
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
+
+    try:
+        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
+    except asyncio.TimeoutError:
+        logging.debug("Timed out while waiting for reaction.")
+        await msg1.edit(content="❌ Timed out. Message not sent.")
+        await msg1.clear_reactions()
+    else:
+        if res:
+            
+            timestamp=int(mktime(datetime.datetime.now().timetuple()))
+            
+            await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
+            
+            msg=f"{message} (Conductor: {username})."
+            await nuny.discord_utils.post_webhooks(msg,expansion)
+            
+            await msg1.edit(content=f"✅ Messages for {username}'s {expansion}.0 train sent <t:{timestamp}:R>.")
+            await msg1.clear_reactions()
 
 @nuny.discord_utils.bot.command(name="advmanual", 
                                 aliases=['adm','mshout','msh'],
