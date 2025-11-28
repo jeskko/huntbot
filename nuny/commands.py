@@ -900,8 +900,9 @@ async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
                 await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
 
                 if world != None:
+                    print(world)
                     if expansion in range(5,8):
-                        set_status(world,"Running",expansion)
+                        set_status(parse_world(world),"Running",expansion)
                 
                 await nuny.discord_utils.post_webhooks(msg,expansion)
                 
