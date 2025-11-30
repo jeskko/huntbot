@@ -474,7 +474,7 @@ async def adjust_tree(interaction: nuny.discord_utils.discord.Interaction, statu
 
     time,exp=parse_parameters(time,7)
     nuny.db_utils.settime(status,time)
-    interaction.response.send_message(f"✅ Status #{status} adjusted to {time}.")
+    await interaction.response.send_message(f"✅ Status #{status} adjusted to {time}.")
     
 @nuny.discord_utils.bot.command(name="adjust",aliases=['fix'],help="Adjust timestamp of a previous status.")
 async def adjust_cmd(ctx,id,time):
