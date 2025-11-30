@@ -7,6 +7,7 @@ import discord
 import logging
 
 from discord.ext import tasks
+from discord import Object as DiscordObject
 
 import nuny.config
 import nuny.discord_utils
@@ -57,10 +58,11 @@ async def ChannelLoop():
 @nuny.discord_utils.bot.event
 async def on_ready():
     logging.info(f'{nuny.discord_utils.bot.user} has connected to Discord!')
+    await nuny.discord_utils.bot.tree.sync(guild=nuny.discord_utils.guild)
     await nuny.discord_utils.check_messages()
     ChannelLoop.start()
     STLoop.start()
-    StatusLoop.start() 
+    StatusLoop.start()
     if nuny.config.conf["sonar"]["enable"]==True:
         websocketrunner.start()
 

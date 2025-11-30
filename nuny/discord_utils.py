@@ -37,7 +37,9 @@ async def on_command_error(ctx: commands.Context, error):
         traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
 bot = commands.Bot(command_prefix=".",intents=intents)
-bot.on_command_error=on_command_error
+bot.on_command_error=on_command_error 
+
+guild = discord.Object(id=nuny.config.conf["discord"]["guild"])
 
 async def post_webhooks(msg, expansion):
     """Send a message using webhook to multiple Discord servers."""
