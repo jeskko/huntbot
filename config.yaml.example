@@ -2,6 +2,8 @@
 
 discord:
   token: XXX
+  guild: XXX
+  preview_webhook: https://
   channels:
     bot: 1
     log: 1

@@ -242,7 +242,7 @@ async def scoutend_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
 @nuny.discord_utils.bot.tree.command(name="run", description='Start train.\n Time can be manually set in form "+15" (minutes) or "15:24" (server time)', guild=nuny.discord_utils.guild)
 @app_commands.describe(world="World")
 @app_commands.choices(world=worldchoices)
-@app_commands.describe(time="Start time (optional)")
+@app_commands.describe(time="Start time (optional, UTC/ST)")
 @app_commands.describe(expansion="Expansion")
 @app_commands.choices(expansion=expansionchoices)
 async def begintrain_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], time: str | None, expansion: app_commands.Choice[int]):
@@ -297,7 +297,7 @@ async def begintrain_cmd(ctx, world, time=None, expansion=nuny.config.conf["def_
 @nuny.discord_utils.bot.tree.command(name="end", description="End train", guild=nuny.discord_utils.guild)
 @app_commands.describe(world="World")
 @app_commands.choices(world=worldchoices)
-@app_commands.describe(time="End time (optional)")
+@app_commands.describe(time="End time (optional, UTC/ST)")
 @app_commands.describe(expansion="Expansion")
 @app_commands.choices(expansion=expansionchoices)
 async def endtrain_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], time: str | None, expansion: app_commands.Choice[int]):
@@ -435,7 +435,7 @@ async def gethistory_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
         await ctx.message.add_reaction("❓")
 
 @nuny.discord_utils.bot.tree.command(name="undo", description="Undo a previous status", guild=nuny.discord_utils.guild)
-@app_commands.describe(status="Status ID")
+@app_commands.describe(status="Status ID (get this with /history)")
 async def undo_tree(interaction: nuny.discord_utils.discord.Interaction, status: int):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
@@ -464,7 +464,8 @@ async def undo_cmd(ctx,id):
     await ctx.message.add_reaction("✅")
 
 @nuny.discord_utils.bot.tree.command(name="adjust", description="Adjust timestamp of a previous status.", guild=nuny.discord_utils.guild)
-@app_commands.describe(status="Status ID")
+@app_commands.describe(status="Status ID (get this with /history)")
+@app_commands.describe(time="Time (UTC/ST)")
 async def adjust_tree(interaction: nuny.discord_utils.discord.Interaction, status: int, time: str):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
@@ -496,7 +497,7 @@ async def adjust_cmd(ctx,id,time):
     await ctx.message.add_reaction("✅")
 
 @nuny.discord_utils.bot.tree.command(name="reboot", description="Set reboot timer after maintenance.", guild=nuny.discord_utils.guild)
-@app_commands.describe(time="Estimated server reset time (UTC)")
+@app_commands.describe(time="Estimated server reset time (UTC/ST)")
 async def reboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
@@ -553,7 +554,7 @@ async def reboot_cmd(ctx,time):
         await ctx.send(f"All servers adjusted for server reboot at {time}.")
 
 @nuny.discord_utils.bot.tree.command(name="sonarcleanup", description="Clean up sonar data that is older than parameter time.", guild=nuny.discord_utils.guild)
-@app_commands.describe(time="Time (UTC)")
+@app_commands.describe(time="Time (UTC/ST)")
 async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
@@ -618,7 +619,7 @@ async def sonarboot_cmd(ctx,time):
         await ctx.message.add_reaction("✅")
         await ctx.send(f"All sonar data older than {time} removed.")
  
-@nuny.discord_utils.bot.tree.command(name="cleanup", description="Manually clean up over 7 days old statuses.", guild=nuny.discord_utils.guild)
+@nuny.discord_utils.bot.tree.command(name="cleanup", description="Manually clean up over 7 days old statuses. (For staff use)", guild=nuny.discord_utils.guild)
 async def cleanup_tree(interaction: nuny.discord_utils.discord.Interaction):
 
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
@@ -630,7 +631,7 @@ async def cleanup_tree(interaction: nuny.discord_utils.discord.Interaction):
     r=nuny.db_utils.cleanup()
     await interaction.response.send_message(f"✅ {r} entries were deleted.")
 
-@nuny.discord_utils.bot.command(name="cleanup",help="Manually clean up over 7 days old statuses.")
+@nuny.discord_utils.bot.command(name="cleanup",help="Manually clean up over 7 days old statuses. (For staff use)")
 async def cleanup_cmd(ctx):
 
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
