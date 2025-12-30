@@ -45,6 +45,7 @@ async def post_webhooks(msg, expansion):
     """Send a message using webhook to multiple Discord servers."""
     logging.debug("post_webhooks start")
     await bot_log("post_webhooks start")
+    allowed_roles=discord.AllowedMentions(everyone=False, users=False, roles=True)
     for w in nuny.config.conf["webhooks"]:
         wh=w["webhook"]
         r=w["roles"][expansion]
@@ -58,7 +59,7 @@ async def post_webhooks(msg, expansion):
             async with aiohttp.ClientSession() as session:
                 webhook=discord.Webhook.from_url(w["webhook"], session=session)
                 try:
-                    await webhook.send(content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png")                        
+                    await webhook.send(content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png",allowed_mentions=allowed_roles)                        
                 except (discord.errors.HTTPException,discord.errors.NotFound) as e:
                     logging.error(f'Unable to send message to {w["name"]}: {e}')
                     await bot_log(f'Unable to send message to {w["name"]}: {e}')
