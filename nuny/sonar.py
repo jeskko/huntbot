@@ -383,7 +383,7 @@ async def websocketrunner():
                                         # actorid changed -> new sighting
                                         if (h["ActorId"] != s_msg["Relay"]["ActorId"]):
                                             d=await huntname(s_msg)
-                                            spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted with a new actor id at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')
+                                            await spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted with a new actor id at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')
                                             status=1
                                             if s_msg["LastUpdated"]==s_msg["LastUntouched"]:
                                                 # untouched
@@ -391,19 +391,19 @@ async def websocketrunner():
                                         if ((s_msg["LastUpdated"]-s_msg["LastUntouched"]).total_seconds()>15 and status!=1):
                                             status=1
                                             d=await huntname(s_msg)
-                                            spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby)')
+                                            await spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby)')
                                             if (s_msg["Relay"]["Players"]<10):
                                                 await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} has been pulled and is at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP. ({s_msg["Relay"]["Players"]} players nearby) (SNIPE?)')
                                         if (s_msg["LastUpdated"]==s_msg["LastUntouched"] and status==1):
                                             status=2
                                             d=await huntname(s_msg)
-                                            spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby).')
+                                            await spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby).')
                                             if (s_msg["Relay"]["Players"]<10):
                                                 await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was reset ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
                                         if (s_msg["Relay"]["CurrentHp"]==0 and status != 0):
                                             status=0
                                             d=await huntname(s_msg)
-                                            spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby).')
+                                            await spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby).')
                                             if (s_msg["Relay"]["Players"]<10):
                                                 await spec_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} was killed ({s_msg["Relay"]["Players"]} players nearby). (SNIPE?)')
                                     h=relay_to_sql(s_msg,status)
