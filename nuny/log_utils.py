@@ -38,3 +38,12 @@ async def spec_log(msg):
     except discord.errors.DiscordServerError as e:
         logging.error("Special log message sending failed: {e}")
         pass
+    
+async def spec2_log(msg):
+    """Send message on another special log channel."""
+    
+    try:
+        await nuny.discord_utils.bot.get_channel(nuny.config.conf["discord"]["channels"]["special2"]).send(msg)
+    except discord.errors.DiscordServerError as e:
+        logging.error("Special2 log message sending failed: {e}")
+        pass    

@@ -110,7 +110,7 @@ async def map_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
 @app_commands.describe(world="World")
 @app_commands.choices(world=worldchoices)
 @app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=expansionchoices)
+@app_commands.choices(expansion=allexpansionchoices)
 async def hlth_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int], silent: bool = False):
 
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
