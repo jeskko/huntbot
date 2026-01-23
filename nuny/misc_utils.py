@@ -96,10 +96,10 @@ def process_despawn(status,time):
 def get_statuses(expansion):
     message=f"{expansion}.0 status:\n```"
     table=[]
-    table.append(["Server","Status\nchanged","Status\nduration","Status"])
+    table.append(["Server","Status\nchanged","Status\nduration","Until next\nstatus","Status"])
     for w in nuny.config.conf["worlds"]:
         (status,time)=nuny.db_utils.getstatus(w["name"],expansion)
-        status=process_despawn(status,time)[0]
+        status,start,end=process_despawn(status,time)
         if status=="Unknown":
             t1=""
         else:
@@ -114,7 +114,17 @@ def get_statuses(expansion):
                 t2="long"                
             else:
                 t2=f"{t2_h}:{t2_m:02d}"
-        table.append([w["name"],t1,t2,status])
+        t3_td=datetime.timedelta(seconds=end)
+        t3_h=int(divmod(t3_td.total_seconds(),3600)[0])
+        t3_m=int(divmod(divmod(t3_td.total_seconds(),3600)[1],60)[0])
+        if t3_td.total_seconds()==0:
+            t3=""
+        else:
+            if t3_h>240:
+                t3=""                
+            else:
+                t3=f"{t3_h}:{t3_m:02d}"
+        table.append([w["name"],t1,t2,t3,status])
     message+=tabulate(table,headers="firstrow",tablefmt="fancy_grid")+"```"        
     return message
 

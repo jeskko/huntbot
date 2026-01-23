@@ -10,12 +10,6 @@ discord==2.3.2
 discord-webhook==1.4.1
 discord.py==2.6.4
 frozenlist==1.8.0
-google-api-core==2.28.1
-google-api-python-client==2.187.0
-google-auth==2.41.1
-google-auth-httplib2==0.2.1
-google-auth-oauthlib==1.2.3
-googleapis-common-protos==1.72.0
 httplib2==0.31.0
 idna==3.11
 iniconfig==2.3.0
@@ -25,7 +19,6 @@ packaging==25.0
 pluggy==1.6.0
 propcache==0.4.1
 proto-plus==1.26.1
-protobuf==6.33.0
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 Pygments==2.19.2
