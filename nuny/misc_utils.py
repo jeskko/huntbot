@@ -8,7 +8,7 @@ import nuny.discord_utils
 import nuny.db_utils
 
 
-from nuny.sonar import sonar_speculate,sonar_mapping,sonar_health
+from nuny.sonar import sonar_speculate,sonar_mapping,sonar_health,sonar_spec_raw
 from nuny.log_utils import bot_log,scout_log
 
 async def groundskeeper():
@@ -27,6 +27,19 @@ async def groundskeeper():
             if status=="Running" and td>datetime.timedelta(hours=1,minutes=30):
                 nuny.db_utils.setstatus(n,expansion,"Dead",time+datetime.timedelta(hours=1))
                 logging.info(f"{n} {expansion}.0 changed to dead, someone forgot to end their train.")
+            if nuny.config.conf["sonar"]["enable"]==True:
+                # amount of marks in each expansion, adjust this when instances are in use
+                (alive,despawn,spawned,spawning,dead)=sonar_spec_raw(n,expansion)
+                if status=="Dead" and alive==nuny.config.conf["marks"][expansion]:
+                    nuny.db_utils.setstatus(n,expansion,"Up",datetime.datetime.utcnow())
+                    logging.info(f"{n} {expansion}.0 changed to up because sonar said that everyone is alive.")
+                    await scout_log(f"{n} {expansion}.0 changed to up because Sonar data indicates that all marks are up.")
+                if status=="Running" or status=="Up" and dead==nuny.config.conf["marks"][expansion]:    
+                    nuny.db_utils.setstatus(n,expansion,"Dead",datetime.datetime.utcnow())
+                    logging.info(f"{n} {expansion}.0 changed to dead because sonar said that everyone is dead.")
+                    await scout_log(f"{n} {expansion}.0 changed to dead because Sonar data indicates that all marks are dead.")
+
+        
                 
 async def dailycleanup():
     r=nuny.db_utils.cleanup()
