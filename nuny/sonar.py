@@ -372,7 +372,7 @@ async def websocketrunner():
                                     h=nuny.db_utils.cursor.execute(check,(s_msg["Relay"]["Key"],)).fetchone()
                                     if h==None:
                                         d=await huntname(s_msg)
-                                        logging.info(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted first time after database refresh at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')                                    
+                                        await spec2_log(f'{d["exp"]}: [{d["world"]}] {d["name"]}{d["instance"]} spotted first time after database refresh at {int((s_msg["Relay"]["CurrentHp"]/s_msg["Relay"]["MaxHp"])*100)}% HP.')                                    
                                         status=1
                                         if s_msg["LastUpdated"]==s_msg["LastUntouched"]:
                                             status=2
