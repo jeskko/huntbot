@@ -93,7 +93,7 @@ async def huntname(msg):
              'name': h[0],
              'instance': instances[int(msg["Relay"]["InstanceId"])]})
 
-def sonar_speculate(w,exp):
+def sonar_spec_raw(w,exp):
     # marks probably despawned, last 18 hours
     sel_despawn="""
 SELECT count(*) from hunt 
@@ -146,6 +146,12 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > date
     
     nuny.db_utils.cursor.execute(sel_dead,(exp, w))
     dead=nuny.db_utils.cursor.fetchall()[0][0]
+
+    return (alive,despawn,spawned,spawning,dead)
+
+def sonar_speculate(w,exp):
+
+    (alive,despawn,spawned,spawning,dead)=sonar_spec_raw(w,exp)
 
     return f"\nSonar data suggests that {alive} marks are alive, {spawned} marks should have spawned, {despawn} marks might have already despawned, {spawning} marks have potential to spawn and {dead} marks are dead."
 
