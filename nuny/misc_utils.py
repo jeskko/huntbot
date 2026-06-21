@@ -34,7 +34,7 @@ async def groundskeeper():
                     nuny.db_utils.setstatus(n,expansion,"Up",datetime.datetime.utcnow())
                     logging.info(f"{n} {expansion}.0 changed to up because sonar said that everyone is alive.")
                     await scout_log(f"{n} {expansion}.0 changed to up because Sonar data indicates that all marks are up.")
-                if status=="Running" or status=="Up" and dead==nuny.config.conf["marks"][expansion]:    
+                if (status=="Running" or status=="Up" or status=="Scouting" or status=="Scouted") and dead==nuny.config.conf["marks"][expansion]:    
                     nuny.db_utils.setstatus(n,expansion,"Dead",datetime.datetime.utcnow())
                     logging.info(f"{n} {expansion}.0 changed to dead because sonar said that everyone is dead.")
                     await scout_log(f"{n} {expansion}.0 changed to dead because Sonar data indicates that all marks are dead.")
@@ -332,6 +332,8 @@ async def update_messages():
 
 
 async def update_channels():
+    waxing_moons="🌑🌒🌓🌔🌕"
+    waning_moons="🌕🌖🌗🌘🌑"
     """Fetch data db and update channel names."""
     for w in nuny.config.conf["worlds"]:
         world=w["name"]
@@ -344,24 +346,32 @@ async def update_channels():
                 sc=True
             else:
                 sc=False
-            status=process_despawn(status,time)[0]
+            status,start,end=process_despawn(status,time)
             if (status=="Despawning" or status=="Despawned") and sc==True:
                 await scout_log(f"{world} {exp}.0 is now despawning and was scouted, resetting scouted status.")
                 r=nuny.db_utils.unscout(world,exp)
                 logging.info(f"Unscouting affected {r} rows.")
             if status=="Spawning" and sc==True:
                 status="Scouted"
-            await update_channel(chan,s_world,status)
+            pct=""
+            if start + end != 0:
+                progress = start / (start + end)      # 0.0 just started → 1.0 about to end
+                p = min(int(progress * 5), 4)         # 0..4, never 5
+                if status in ["Up", "Scouted", "Despawning"]:
+                    pct = waning_moons[p]
+                elif status in ["Dead", "Spawning", "Despawned"]:
+                    pct = waxing_moons[p]
+            await update_channel(chan,s_world,status,pct)
     print("update channels done")
 
-async def update_channel(chan,s_name,status):
+async def update_channel(chan,s_name,status,pct):
     """Update channel name value. Will check if actual update is necessary to avoid rate limiting."""
     
     try:
         st=[st for st in nuny.config.conf["statuses"] if st["name"]==status][0]
     except IndexError:
         raise ValueError(f"Invalid world status {status}.")
-    newname=f'{st["icon"]}{s_name}-{st["short"]}'
+    newname=f'{st["icon"]}{s_name}-{st["short"]}{pct}'
     
     chan=nuny.discord_utils.bot.get_channel(chan) 
     if chan.name != newname:
