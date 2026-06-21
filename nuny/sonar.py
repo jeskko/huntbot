@@ -187,7 +187,7 @@ def init_sonar():
 
         # S-rank list for special purposes
 
-        nuny.db_utils.cursor.execute('SELECT id from hunts WHERE rank=3')
+        nuny.db_utils.cursor.execute('SELECT id from hunts WHERE rank>=3')
         r=nuny.db_utils.cursor.fetchall()
 
         huntidlist_s=[]
