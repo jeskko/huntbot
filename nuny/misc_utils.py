@@ -8,7 +8,7 @@ import nuny.discord_utils
 import nuny.db_utils
 
 
-from nuny.sonar import sonar_speculate,sonar_mapping,sonar_health,sonar_spec_raw
+from nuny.sonar import sonar_speculate,sonar_mapping,sonar_health,sonar_spec_raw,sonar_stats
 from nuny.log_utils import bot_log,scout_log
 
 async def groundskeeper():
@@ -38,6 +38,8 @@ async def groundskeeper():
                     nuny.db_utils.setstatus(n,expansion,"Dead",datetime.datetime.utcnow())
                     logging.info(f"{n} {expansion}.0 changed to dead because sonar said that everyone is dead.")
                     await scout_log(f"{n} {expansion}.0 changed to dead because Sonar data indicates that all marks are dead.")
+                    if nuny.config.conf["sonar"]["enable"]==True:
+                        await scout_log(sonar_stats(n,expansion))
 
         
                 
@@ -363,7 +365,8 @@ async def update_channels():
                 elif status in ["Dead", "Spawning", "Despawned"]:
                     pct = waxing_moons[p]
             else:
-                pct = thunder   
+                if status == "Up":
+                    pct = thunder   
             await update_channel(chan,s_world,status,pct)
     print("update channels done")
 
