@@ -334,6 +334,7 @@ async def update_messages():
 async def update_channels():
     waxing_moons="🌑🌒🌓🌔🌕"
     waning_moons="🌕🌖🌗🌘🌑"
+    thunder="⛈️"
     """Fetch data db and update channel names."""
     for w in nuny.config.conf["worlds"]:
         world=w["name"]
@@ -361,6 +362,8 @@ async def update_channels():
                     pct = waning_moons[p]
                 elif status in ["Dead", "Spawning", "Despawned"]:
                     pct = waxing_moons[p]
+            else:
+                pct = thunder   
             await update_channel(chan,s_world,status,pct)
     print("update channels done")
 
