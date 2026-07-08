@@ -29,10 +29,10 @@ async def groundskeeper():
                 logging.info(f"{n} {expansion}.0 changed to dead, someone forgot to end their train.")
             if nuny.config.conf["sonar"]["enable"]==True:
                 # amount of marks in each expansion, adjust this when instances are in use
-                (alive,despawn,spawned,spawning,dead)=sonar_spec_raw(n,expansion)
-                if status=="Dead" and alive==nuny.config.conf["marks"][expansion]:
+                (alive,despawn,spawned,spawning,dead,alive2)=sonar_spec_raw(n,expansion)
+                if status=="Dead" and alive2==nuny.config.conf["marks"][expansion]:
                     nuny.db_utils.setstatus(n,expansion,"Up",datetime.datetime.utcnow())
-                    logging.info(f"{n} {expansion}.0 changed to up because sonar said that everyone is alive.")
+                    logging.info(f"{n} {expansion}.0 changed to up because sonar said that everyone has been seen alive within last 6 hours.")
                     await scout_log(f"{n} {expansion}.0 changed to up because Sonar data indicates that all marks are up.")
                 if (status=="Running" or status=="Up" or status=="Scouting" or status=="Scouted") and dead==nuny.config.conf["marks"][expansion]:    
                     nuny.db_utils.setstatus(n,expansion,"Dead",datetime.datetime.utcnow())

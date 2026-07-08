@@ -108,6 +108,13 @@ INNER JOIN hunts on hunts.id = hunt.huntid
 INNER JOIN worlds on worlds.id=hunt.worldid 
 WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastfound > datetime('now', '-22 hours') AND currenthp!=0
         """
+    # marks alive, seen within last 6 hours
+    sel_alive2="""
+SELECT count(*) from hunt 
+INNER JOIN hunts on hunts.id = hunt.huntid 
+INNER JOIN worlds on worlds.id=hunt.worldid 
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastfound > datetime('now', '-6 hours') AND currenthp!=0
+        """        
     # marks that should have respawned but no sighting
     sel_spawned="""
 SELECT count(*) from hunt 
@@ -147,11 +154,14 @@ WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > date
     nuny.db_utils.cursor.execute(sel_dead,(exp, w))
     dead=nuny.db_utils.cursor.fetchall()[0][0]
 
-    return (alive,despawn,spawned,spawning,dead)
+    nuny.db_utils.cursor.execute(sel_alive2,(exp, w))
+    alive2=nuny.db_utils.cursor.fetchall()[0][0]
+
+    return (alive,despawn,spawned,spawning,dead,alive2)
 
 def sonar_speculate(w,exp):
 
-    (alive,despawn,spawned,spawning,dead)=sonar_spec_raw(w,exp)
+    (alive,despawn,spawned,spawning,dead,alive2)=sonar_spec_raw(w,exp)
 
     return f"\nSonar data suggests that {alive} marks are alive, {spawned} marks should have spawned, {despawn} marks might have already despawned, {spawning} marks have potential to spawn and {dead} marks are dead."
 
