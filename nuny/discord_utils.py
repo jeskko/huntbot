@@ -20,8 +20,7 @@ async def ok_reaction(ctx: commands.Context):
         for i in bot.guilds:
             meow=discord.utils.get(i.emojis, name="meow")
         await ctx.message.add_reaction(meow)
-    else:
-        await ctx.message.add_reaction('✅')
+    await ctx.message.add_reaction('✅')
 
 async def on_command_error(ctx: commands.Context, error):
     # Handle your errors here
