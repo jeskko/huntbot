@@ -66,7 +66,7 @@ async def spec_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
         await ctx.send("Untracked expansion")
         await ctx.message.add_reaction("❓")
         return
-    await ctx.message.add_reaction("✅")
+    await nuny.discord_utils.ok_reaction(ctx)
     await ctx.send(msg)
 
 @nuny.discord_utils.bot.tree.command(name="map", description='Check mapping data from Sonar', guild=nuny.discord_utils.guild)
@@ -103,7 +103,7 @@ async def map_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
         return()
-    await ctx.message.add_reaction("✅")
+    await nuny.discord_utils.ok_reaction(ctx)
     await ctx.send(msg)
 
 @nuny.discord_utils.bot.tree.command(name="health", description='Check last seen data from Sonar', guild=nuny.discord_utils.guild)
@@ -140,7 +140,7 @@ async def hlth_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
         return()
-    await ctx.message.add_reaction("✅")
+    await nuny.discord_utils.ok_reaction(ctx)
     await ctx.send(msg)
 
 @nuny.discord_utils.bot.tree.command(name="scout", description='Begin scouting', guild=nuny.discord_utils.guild)
@@ -186,7 +186,7 @@ async def scouting_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
 
     try:
         set_status(world,"Scouting",expansion, "last")
-        await ctx.message.add_reaction("✅")
+        await nuny.discord_utils.ok_reaction(ctx)
     except ValueError as ex:
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
@@ -234,7 +234,7 @@ async def scoutend_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
 
     try:
         set_status(world,"Scouted",expansion,"last")
-        await ctx.message.add_reaction("✅")
+        await nuny.discord_utils.ok_reaction(ctx)
     except ValueError as ex:
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
@@ -289,7 +289,7 @@ async def begintrain_cmd(ctx, world, time=None, expansion=nuny.config.conf["def_
 
     try:
         set_status(world,"Running",expansion,time)
-        await ctx.message.add_reaction("✅")
+        await nuny.discord_utils.ok_reaction(ctx)
     except ValueError as ex:
         await ctx.message.add_reaction("❓")
         await ctx.send(ex)
@@ -345,7 +345,7 @@ async def endtrain_cmd(ctx, world, time=None, expansion=nuny.config.conf["def_ex
 
     try:
         set_status(world,"Dead",expansion,time)
-        await ctx.message.add_reaction("✅")
+        await nuny.discord_utils.ok_reaction(ctx)
         if nuny.config.conf["sonar"]["enable"]==True:
             (time,expansion)=parse_parameters(time,expansion) 
             await scout_log(sonar_stats(world,expansion))
@@ -382,7 +382,7 @@ async def getstatus_cmd(ctx, expansion=nuny.config.conf["def_exp"]):
         if int(expansion) in range(5,8):
             msg=get_statuses(expansion)
             await ctx.send(msg)
-            await ctx.message.add_reaction("✅")
+            await nuny.discord_utils.ok_reaction(ctx)
         else:
             await ctx.message.add_reaction("❓")
             await ctx.send("Invalid expansion")
@@ -429,7 +429,7 @@ async def gethistory_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
     if expansion in range(5,8):
         msg=get_history(world,expansion)
         await ctx.send(msg)
-        await ctx.message.add_reaction("✅")
+        await nuny.discord_utils.ok_reaction(ctx)
     else:
         await ctx.send("Invalid expansion")
         await ctx.message.add_reaction("❓")
@@ -461,7 +461,7 @@ async def undo_cmd(ctx,id):
         return()
 
     nuny.db_utils.delstatus(id)
-    await ctx.message.add_reaction("✅")
+    await nuny.discord_utils.ok_reaction(ctx)
 
 @nuny.discord_utils.bot.tree.command(name="adjust", description="Adjust timestamp of a previous status.", guild=nuny.discord_utils.guild)
 @app_commands.describe(status="Status ID (get this with /history)")
@@ -494,7 +494,7 @@ async def adjust_cmd(ctx,id,time):
 
     time,exp=parse_parameters(time,7)
     nuny.db_utils.settime(id,time)
-    await ctx.message.add_reaction("✅")
+    await nuny.discord_utils.ok_reaction(ctx)
 
 @nuny.discord_utils.bot.tree.command(name="reboot", description="Set reboot timer after maintenance.", guild=nuny.discord_utils.guild)
 @app_commands.describe(time="Estimated server reset time (UTC/ST)")
@@ -550,7 +550,7 @@ async def reboot_cmd(ctx,time):
     else:
         maintenance_reboot(time)
         await msg1.delete()
-        await ctx.message.add_reaction("✅")
+        await nuny.discord_utils.ok_reaction(ctx)
         await ctx.send(f"All servers adjusted for server reboot at {time}.")
 
 @nuny.discord_utils.bot.tree.command(name="sonarcleanup", description="Clean up sonar data that is older than parameter time.", guild=nuny.discord_utils.guild)
@@ -616,7 +616,7 @@ async def sonarboot_cmd(ctx,time):
     else:
         sonarreset(time)
         await msg1.delete()
-        await ctx.message.add_reaction("✅")
+        await nuny.discord_utils.ok_reaction(ctx)
         await ctx.send(f"All sonar data older than {time} removed.")
  
 @nuny.discord_utils.bot.tree.command(name="cleanup", description="Manually clean up over 7 days old statuses. (For staff use)", guild=nuny.discord_utils.guild)
@@ -641,7 +641,7 @@ async def cleanup_cmd(ctx):
 
     r=nuny.db_utils.cleanup()
     await ctx.send(f"{r} entries were deleted.")
-    await ctx.message.add_reaction("✅")
+    await nuny.discord_utils.ok_reaction(ctx)
                 
 @nuny.discord_utils.bot.command(name="advertise", 
                                 aliases=['ad','shout','sh'],

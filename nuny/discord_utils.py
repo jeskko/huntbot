@@ -7,10 +7,21 @@ import nuny.config
 import nuny.state
 from nuny.log_utils import bot_log
 
+from random import random
+
 discord.VoiceClient.warn_nacl=False
 
 intents=discord.Intents.default()
 intents.message_content=True
+
+async def ok_reaction(ctx: commands.Context):
+    """Add a reaction to the message to indicate that the command was successful."""
+    if random()<0.01:
+        for i in bot.guilds:
+            meow=discord.utils.get(i.emojis, name="meow")
+        await ctx.message.add_reaction(meow)
+    else:
+        await ctx.message.add_reaction('✅')
 
 async def on_command_error(ctx: commands.Context, error):
     # Handle your errors here
