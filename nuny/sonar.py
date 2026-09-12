@@ -83,7 +83,9 @@ async def huntname(msg):
                3: ' (3)',
                4: ' (4)',
                5: ' (5)',
-               6: ' (6)'}
+               6: ' (6)',
+               7: ' (7)',
+               8: ' (8)'}
     sel="SELECT name,expansion FROM hunts WHERE id = ?"
     h=nuny.db_utils.cursor.execute(sel,(msg["Relay"]["Id"],)).fetchone()
     sel="SELECT name FROM worlds WHERE id = ?"
@@ -269,7 +271,9 @@ def sonar_health(w,expansion=7):
             3: '',
             4: '',
             5: '',
-            6: ''}
+            6: '',
+            7: '',
+            8: ''}
     
     ilong={0: '',
         1: '  (I1)',
@@ -277,7 +281,9 @@ def sonar_health(w,expansion=7):
         3: '  (I3)',
         4: '  (I4)',
         5: '  (I5)',
-        6: '  (I6)'}
+        6: '  (I6)',
+        7: '  (I7)',
+        8: '  (I8)',}
     
     sel="""
 SELECT hunts.name, zones.name,hunt.instanceid, 
@@ -300,12 +306,20 @@ ORDER BY hunt.zoneid,hunt.instanceid
     msg+="```"
     return msg
         
-def sonarreset(timestamp):
-    sel="""
-DELETE FROM hunt 
-WHERE lastfound < ?
-    """
-    nuny.db_utils.cursor.execute(sel,(timestamp,))
+def sonarreset(timestamp, world=None):
+    if world:
+        sel="""
+            DELETE FROM hunt
+            WHERE lastfound < ?
+            AND worldid IN (SELECT id FROM worlds WHERE name = ?)
+        """
+        nuny.db_utils.cursor.execute(sel,(timestamp,world))
+    else:
+        sel="""
+            DELETE FROM hunt
+            WHERE lastfound < ?
+            """
+        nuny.db_utils.cursor.execute(sel,(timestamp,))
     return nuny.db_utils.cursor.rowcount
         
 def sonar_stats(world,exp):
@@ -427,6 +441,7 @@ async def websocketrunner():
                                     
                     except KeyError as errori:
                         logging.error(f"Got a KeyError in websocketrunner: {errori}")
+                        logging.error(f"Message was: {s_msg}")
                         pass
                     nuny.db_utils.conn.commit()
         except websockets.exceptions.WebSocketException as errori:

@@ -152,10 +152,15 @@ def get_history(world,expansion):
     message+=tabulate(table,headers="firstrow",tablefmt="fancy_grid")+"```"        
     return message 
 
-def maintenance_reboot(time):
+def maintenance_reboot(time, world=None):
     for w in nuny.config.conf["worlds"]:
-       for e in range(5,8):
-           nuny.db_utils.setstatus(w["name"],e,"Rebooted",time)
+        if world:
+            if w["name"] == world:
+                for e in range(5,8):
+                    nuny.db_utils.setstatus(w["name"],e,"Rebooted",time)
+        else:
+            for e in range(5,8):
+                nuny.db_utils.setstatus(w["name"],e,"Rebooted",time)
 
 def parse_world(world):
     """

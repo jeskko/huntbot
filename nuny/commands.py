@@ -498,16 +498,21 @@ async def adjust_cmd(ctx,id,time):
 
 @nuny.discord_utils.bot.tree.command(name="reboot", description="Set reboot timer after maintenance.", guild=nuny.discord_utils.guild)
 @app_commands.describe(time="Estimated server reset time (UTC/ST)")
-async def reboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str):
+@app_commands.describe(world="World")
+@app_commands.choices(world=[app_commands.Choice(name="All", value="All")] + worldchoices)
+async def reboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str, world: app_commands.Choice[str]):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
         return
 
-    await bot_log(f"{interaction.user.display_name}: reboot {time}")
+    await bot_log(f"{interaction.user.display_name}: reboot {time} {world}")
 
     time,exp=parse_parameters(time,7)
 
-    await interaction.response.send_message(f"About to reset all worlds maintenance end to time {time}. Confirm by reacting to this with a ✅.")
+    if world.name == 'All':
+        await interaction.response.send_message(f"About to reset all worlds maintenance end to time {time}. Confirm by reacting to this with a ✅.")
+    else:
+        await interaction.response.send_message(f"About to reset world '{world.name}' maintenance end to time {time}. Confirm by reacting to this with a ✅.")
     msg1= await interaction.original_response()
     await msg1.add_reaction("✅")
 
@@ -522,19 +527,34 @@ async def reboot_tree(interaction: nuny.discord_utils.discord.Interaction, time:
         await msg1.clear_reactions()
         
     else:
-        maintenance_reboot(time)
-        await msg1.edit(content=f"✅ All servers adjusted for server reboot at {time}.")
+        if world.name == 'All':
+            maintenance_reboot(time)
+            await msg1.edit(content=f"✅ All servers adjusted for server reboot at {time}.")
+        else:
+            parsed_world = parse_world(world.value)
+            maintenance_reboot(time, parsed_world)
+            await msg1.edit(content=f"✅ World server '{world.name}' adjusted for server reboot at {time}.")
         await msg1.clear_reactions()
     
-@nuny.discord_utils.bot.command(name="reboot",help="Set reboot timer after maintenance.")
-async def reboot_cmd(ctx,time):
+@nuny.discord_utils.bot.command(name="reboot",help="Set reboot timer after maintenance. Optionally include world at the end")
+async def reboot_cmd(ctx,time, world=None):
 
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
     await log_cmd(ctx)
     time,exp=parse_parameters(time,7)
 
-    msg1=await ctx.send(f"About to reset all worlds maintenance end to time {time}. Confirm by reacting to this with a ✅.")
+    if world:
+        parsed_world = parse_world(world)
+    else:
+        parsed_world = None
+
+    if parsed_world:
+        msg1=await ctx.send(f"About to reset world '{parsed_world}' maintenance end to time {time}. Confirm by reacting to this with a ✅.")
+    else:
+        msg1=await ctx.send(f"About to reset all worlds maintenance end to time {time}. Confirm by reacting to this with a ✅.")
+
+
     await msg1.add_reaction("✅")
 
     def check(reaction, user):
@@ -548,19 +568,26 @@ async def reboot_cmd(ctx,time):
         await ctx.message.add_reaction('❌')
         
     else:
-        maintenance_reboot(time)
+        if parsed_world:
+            maintenance_reboot(time, world)
+            await ctx.send(f"✅ World server '{parsed_world}' adjusted for server reboot at {time}.")
+        else:
+            maintenance_reboot(time)
+            await ctx.send(f"All servers adjusted for server reboot at {time}.")
         await msg1.delete()
         await nuny.discord_utils.ok_reaction(ctx)
-        await ctx.send(f"All servers adjusted for server reboot at {time}.")
+
 
 @nuny.discord_utils.bot.tree.command(name="sonarcleanup", description="Clean up sonar data that is older than parameter time.", guild=nuny.discord_utils.guild)
 @app_commands.describe(time="Time (UTC/ST)")
-async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str):
+@app_commands.describe(world="World")
+@app_commands.choices(world=[app_commands.Choice(name="All", value="All")] + worldchoices)
+async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str, world: app_commands.Choice[str]):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
         await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
         return
 
-    await bot_log(f"{interaction.user.display_name}: sonarcleanup {time}")
+    await bot_log(f"{interaction.user.display_name}: sonarcleanup {time} {world}")
     
     try:
         time,exp=parse_parameters(time,7)
@@ -568,7 +595,10 @@ async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, ti
         await interaction.response.send_message("❌ invalid time value.")
         return
 
-    await interaction.response.send_message(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
+    if world.name == 'All':
+        await interaction.response.send_message(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
+    else:
+        await interaction.response.send_message(f"About to erase all sonar info older than {time} for world '{world.name}'. Confirm by reacting to this with a ✅.")
     msg1= await interaction.original_response()
     await msg1.add_reaction("✅")
 
@@ -583,12 +613,17 @@ async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, ti
         await msg1.clear_reactions()
         
     else:
-        sonarreset(time)
-        await msg1.edit(content=f"✅ All sonar data older than {time} removed.")
+        if world.name == 'All':
+            sonarreset(time)
+            await msg1.edit(content=f"✅ All sonar data older than {time} removed.")
+        else:
+            parsed_world = parse_world(world.name)
+            sonarreset(time, parsed_world)
+            await msg1.edit(content=f"✅ All sonar data older than {time} for world '{world.name}' removed.")
         await msg1.clear_reactions()
 
-@nuny.discord_utils.bot.command(name="sonarcleanup",help="Clean up sonar data that is older than parameter time.")
-async def sonarboot_cmd(ctx,time):
+@nuny.discord_utils.bot.command(name="sonarcleanup",help="Clean up sonar data that is older than parameter time. Optionally include a world")
+async def sonarboot_cmd(ctx,time, world=None):
 
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
         return
@@ -600,7 +635,15 @@ async def sonarboot_cmd(ctx,time):
         await ctx.send("Invalid time.")
         return()
 
-    msg1=await ctx.send(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
+    if world:
+        parsed_world = parse_world(world)
+    else:
+        parsed_world = None
+
+    if parsed_world:
+        msg1=await ctx.send(f"About to erase all sonar info older than {time} for world '{parsed_world}'. Confirm by reacting to this with a ✅.")
+    else:
+        msg1=await ctx.send(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
     await msg1.add_reaction("✅")
 
     def check(reaction, user):
@@ -614,10 +657,15 @@ async def sonarboot_cmd(ctx,time):
         await ctx.message.add_reaction('❌')
         
     else:
-        sonarreset(time)
+        if parsed_world:
+            sonarreset(time, parsed_world)
+            await ctx.send(f"All sonar data older than {time} for world '{parsed_world}' removed.")
+        else:
+            sonarreset(time)
+            await ctx.send(f"All sonar data older than {time} removed.")
         await msg1.delete()
         await nuny.discord_utils.ok_reaction(ctx)
-        await ctx.send(f"All sonar data older than {time} removed.")
+
  
 @nuny.discord_utils.bot.tree.command(name="cleanup", description="Manually clean up over 7 days old statuses. (For staff use)", guild=nuny.discord_utils.guild)
 async def cleanup_tree(interaction: nuny.discord_utils.discord.Interaction):
