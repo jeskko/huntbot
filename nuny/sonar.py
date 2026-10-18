@@ -299,7 +299,7 @@ ORDER BY hunt.zoneid,hunt.instanceid
     h=nuny.db_utils.cursor.fetchall()
     msg="Sonar data suggests following hunt health status:\n```\n"
     for l in h:
-        td=datetime.datetime.utcnow()-l[5]
+        td=datetime.datetime.now(datetime.timezone.utc)-l[5]
         td_h=td.seconds//3600
         td_m=(td.seconds//60%60)
         msg+=f"{l[0]}: last seen {td_h:02d}:{td_m:02d} ago{ilong[l[2]]}\n"

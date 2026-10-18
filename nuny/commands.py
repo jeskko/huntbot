@@ -271,7 +271,7 @@ async def scoutend_cmd(
         return()
 
     try:
-        set_status(world,"Scouted",expansion.value,"last")
+        set_status(world,"Scouted",expansion,"last")
         await nuny.discord_utils.ok_reaction(ctx)
         await ctx.send(f"{world} {expansion}.0 scouting complete.")
     except ValueError as ex:
@@ -312,16 +312,20 @@ async def begintrain_cmd(
         await bot_log(f"ValueError: {ex}")
         await ctx.send("Invalid world.", ephemeral=False)
         return()
+    
+    try:
+        (time,expansion)=parse_parameters(time,expansion)
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await ctx.send("Invalid parameters.", ephemeral=False)
+        return()
 
-    if time != None:
-        timetext=f" at time {time}"
-    else:
-        timetext=""
+    timetext=f"<t:{int(time.timestamp())}:R>"
 
     try:
-        set_status(world,"Running",expansion.value,time)
+        set_status(world,"Running",expansion,time)
         await nuny.discord_utils.ok_reaction(ctx)
-        await ctx.send(f"{world} {expansion}.0 set to running{timetext}.")
+        await ctx.send(f"{world} {expansion}.0 set to running {timetext}.")
     except ValueError as ex:
         await bot_log(f"ValueError: {ex}")
         await ctx.send(f"Error: {ex}", ephemeral=False)
@@ -361,16 +365,16 @@ async def endtrain_cmd(
         await ctx.send("Invalid world.", ephemeral=False)
         return()
     try:
+        (time,expansion)=parse_parameters(time,expansion)
         set_status(world,"Dead",expansion,time)
         await nuny.discord_utils.ok_reaction(ctx)
-        if time != None:
-            timetext=f" at time {time}"
-        else:
-            timetext=""
+
+        timetext=f"<t:{int(time.timestamp())}:R>"
+
         if nuny.config.conf["sonar"]["enable"]==True:
-            await ctx.send(f"{world} {expansion}.0 set to Dead{timetext}.\n{sonar_stats(world,expansion)}")
+            await ctx.send(f"{world} {expansion}.0 set to Dead {timetext}.\n{sonar_stats(world,expansion)}")
         else:
-            await ctx.send(f"{world} {expansion}.0 set to Dead{timetext}.")
+            await ctx.send(f"{world} {expansion}.0 set to Dead {timetext}.")
     except ValueError as ex:
         await ctx.send(f"Error: {ex}", ephemeral=True)
         await bot_log(f"ValueError: {ex}")
@@ -582,6 +586,8 @@ async def cleanup_tree(
     await nuny.discord_utils.ok_reaction(ctx)
     await ctx.send(f"{r} entries were deleted.")
                 
+
+
 @nuny.discord_utils.bot.command(name="advertise", 
                                 aliases=['ad','shout','sh'],
                                 help='''Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). 
@@ -600,8 +606,8 @@ async def advertise_cmd(ctx, world, start, expansion=nuny.config.conf["def_exp"]
         await ctx.send("Start location needs to be over 5 characters.")
         return
 
-    tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
-    timestamp=int(mktime(tenmin.timetuple()))
+    tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now(datetime.timezone.utc)
+    timestamp=int(tenmin.timestamp())
 
     try:
         world=parse_world(world)
@@ -609,7 +615,6 @@ async def advertise_cmd(ctx, world, start, expansion=nuny.config.conf["def_exp"]
         await ctx.message.add_reaction("❓")
         await ctx.send("Invalid world.")
         return()
-
 
     try:
         expansion=int(expansion)
@@ -672,6 +677,8 @@ async def advertise_cmd(ctx, world, start, expansion=nuny.config.conf["def_exp"]
                                 help='''Advertise your train. 
                                         Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")''',
                                 ignore_extra=False)
+
+
 
 async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
@@ -739,6 +746,8 @@ async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
             await ctx.message.add_reaction('✅')
             await scout_log("Messages sent.")
             
+
+
 @nuny.discord_utils.bot.tree.command(name="shout", description="Advertise your train.", guild=nuny.discord_utils.guild)
 async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
@@ -809,8 +818,8 @@ async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
         if world==None:
             msg=f"{message} (Conductor: {username})."
         else:
-            tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
-            timestamp=int(mktime(tenmin.timetuple()))
+            tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now(datetime.timezone.utc)
+            timestamp=int(tenmin.timestamp())
             msg=f"**[{wname}]** Hunt train starting <t:{timestamp}:R> at {message} (Conductor: {username})."
 
         await modal_interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅ or wait for timeout.")
@@ -835,7 +844,7 @@ async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
             await msg1.clear_reactions()
         else:
             if res:
-                timestamp=int(mktime(datetime.datetime.now().timetuple()))
+                timestamp=int(mktime(datetime.datetime.now(datetime.timezone.utc).timetuple()))
                 await bot_log(f"Sending train advertisement:\n```{msg}```")
                 await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
 
