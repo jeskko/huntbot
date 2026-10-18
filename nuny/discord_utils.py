@@ -16,11 +16,13 @@ intents.message_content=True
 
 async def ok_reaction(ctx: commands.Context):
     """Add a reaction to the message to indicate that the command was successful."""
-    if random()<0.01:
-        for i in bot.guilds:
-            meow=discord.utils.get(i.emojis, name="meow")
-        await ctx.message.add_reaction(meow)
-    await ctx.message.add_reaction('✅')
+    if ctx.interaction is None:
+        if random()<0.01:
+            for i in bot.guilds:
+                meow=discord.utils.get(i.emojis, name="meow")
+            await ctx.message.add_reaction(meow)
+        await ctx.message.add_reaction('✅')
+    return
 
 async def on_command_error(ctx: commands.Context, error):
     # Handle your errors here
@@ -40,6 +42,10 @@ async def on_command_error(ctx: commands.Context, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.message.add_reaction('❌')
         await ctx.send("Command is missing a required argument.")
+
+    if isinstance(error, commands.BadArgument):
+        await ctx.message.add_reaction('❌')
+        await ctx.send("Bad Argument. Check your typing.")
 
     else:
         # All unhandled errors will print their original traceback
