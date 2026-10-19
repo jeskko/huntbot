@@ -1,5 +1,25 @@
 import sqlite3,datetime
 
+def adapt_datetime_utc(val: datetime.datetime) -> str:
+    if val.tzinfo is None:
+    
+        val = val.replace(tzinfo=datetime.timezone.utc)
+    else:
+        val = val.astimezone(datetime.timezone.utc)
+    return val.isoformat()
+
+def convert_timestamp_utc(val: bytes) -> datetime.datetime:
+    dt = datetime.datetime.fromisoformat(val.decode())
+    if dt.tzinfo is None:
+        # Existing naive data in the DB → treat as UTC
+        return dt.replace(tzinfo=datetime.timezone.utc)
+    return dt.astimezone(datetime.timezone.utc)
+
+
+sqlite3.register_adapter(datetime.datetime, adapt_datetime_utc)
+sqlite3.register_converter("timestamp", convert_timestamp_utc)
+sqlite3.register_converter("datetime", convert_timestamp_utc)
+
 try:
     conn
 except NameError:
@@ -24,7 +44,7 @@ def getstatus(world,exp):
     cursor.execute(sel,(worldid,exp))
     r=cursor.fetchall()
     if len(r)==0:
-        r=[("Unknown",datetime.datetime(1899,12,30))]
+        r=[("Unknown",datetime.datetime(1899,12,30, tzinfo=datetime.timezone.utc))]
     return ((r[0][0],r[0][1]))
 
 def setstatus(world,exp,status,time):
@@ -89,6 +109,6 @@ def cleanup():
     DELETE from 'status'
     WHERE time<?
     """
-    time=datetime.datetime.utcnow()-datetime.timedelta(days=7)
+    time=datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=7)
     cursor.execute(sel,(time,))
     return cursor.rowcount

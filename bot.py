@@ -23,7 +23,7 @@ logging.getLogger('websockets.client').setLevel(logging.INFO)
 
 @tasks.loop(seconds = 60)
 async def STLoop():
-    now=datetime.datetime.strftime(datetime.datetime.utcnow(),"%H:%M")
+    now=datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc),"%H:%M")
     await nuny.discord_utils.bot.change_presence(activity=discord.Game(f"Server time: {now}"))
     try:
         await groundskeeper()

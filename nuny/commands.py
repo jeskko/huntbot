@@ -10,6 +10,7 @@ import aiohttp
 from typing import Optional
 
 from discord import app_commands
+from discord.ext import commands
 
 from nuny.log_utils import bot_log,scout_log
 from nuny.misc_utils import speculate,mapping,health,parse_parameters,parse_world,set_status,get_statuses,get_history,maintenance_reboot
@@ -32,665 +33,561 @@ allexpansionchoices=[
     app_commands.Choice(name="HW", value=3),
     app_commands.Choice(name="ARR", value=2)]
 
-async def log_cmd(ctx):
-    await bot_log(f"{ctx.message.author.display_name} {ctx.message.channel.name}:  {ctx.message.content}")
+bot=nuny.discord_utils.bot
 
-@nuny.discord_utils.bot.tree.command(name="speculate", description='Speculate about status of a certain world', guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=expansionchoices)
-async def spec_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int], silent: bool = False):
-
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: speculate: {world.value} {expansion.value}")
-
-    if expansion.value in range(5,8):
-        msg=speculate(world.value,expansion.value)
+async def log_cmd(ctx: commands.Context):
+    if ctx.interaction is not None:
+        args = " ".join(str(value) for _, value in ctx.interaction.namespace)
+        await bot_log(f"{ctx.author.display_name}: {ctx.command.qualified_name}: {args}")
     else:
-        await interaction.response.send_message("Untracked expansion", ephemeral=True)
-        return
-    await interaction.response.send_message(msg,ephemeral=silent)
+        await bot_log(f"{ctx.message.author.display_name} {ctx.message.channel.name}:  {ctx.message.content}")
+    return
 
-@nuny.discord_utils.bot.command(name='speculate',help='Speculate about status of a certain world')
-async def spec_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
+
+
+async def cmd_verifier(
+        ctx: commands.Context, 
+        expansion: int | None = None, 
+        exprange: range | None = None, 
+        id: int | None = None,
+        silent: bool = False
+):
+    """Verify parameters for a command, complain if necessary,
+    and log the command. Returns True if parameters are valid, False otherwise.
+    
+    Parameters
+    ----------
+    ctx: commands.Context
+        The command context
+    expansion: int | None
+        The expansion to verify
+    exprange: range | None
+        The valid range of expansions
+    id: int | None
+        The ID to verify
+    silent: bool
+        Whether to send the response ephemeral
+    """
+    
+    is_slash = ctx.interaction is not None
+
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
+        if is_slash:
+            await ctx.send("This command is unavailable on this channel.", ephemeral=True)
+        return False
+
     await log_cmd(ctx)
-    if expansion in range(5,8):
-        msg=speculate(world,expansion)
-    else:
-        await ctx.send("Untracked expansion")
-        await ctx.message.add_reaction("❓")
+
+    if exprange is not None and expansion not in exprange:
+        await ctx.send("Untracked expansion", ephemeral = silent)
+        if not is_slash:
+            await ctx.message.add_reaction("❓")
+        return False
+
+    if id is not None:
+        try:
+            id=int(id)
+        except ValueError:
+            await ctx.message.add_reaction("❓")
+            await ctx.send("Invalid ID.", ephemeral = silent)
+            return False
+
+    return True
+
+
+
+@bot.hybrid_command(name='speculate',help='Speculate about status of a certain world')
+@app_commands.guilds(nuny.discord_utils.guild)
+@app_commands.describe(world="World", expansion="Expansion")
+@app_commands.choices(world=worldchoices, expansion=expansionchoices)
+async def speculate_cmd(
+    ctx: commands.Context,
+    world: str,
+    expansion: int = nuny.config.conf["def_exp"],
+    silent: bool = False,
+):
+    """Speculate about the status of a certain world. 
+
+    Parameters
+    ----------
+    world: str
+        World
+    expansion: int
+        Expansion
+    """
+
+    await ctx.defer(ephemeral=silent)
+
+    if not await cmd_verifier(ctx,expansion=expansion,exprange=range(5,8),silent=silent):
         return
+
+    msg=speculate(world, expansion)
     await nuny.discord_utils.ok_reaction(ctx)
-    await ctx.send(msg)
+    await ctx.send(msg, ephemeral=silent)
+    return    
 
-@nuny.discord_utils.bot.tree.command(name="map", description='Check mapping data from Sonar', guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=expansionchoices)
-async def map_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int], silent: bool = False):
 
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+
+@bot.hybrid_command(name="map", aliases=['mapping'])
+@app_commands.guilds(nuny.discord_utils.guild)
+@app_commands.choices(world=worldchoices, expansion=allexpansionchoices)
+async def map_cmd(
+    ctx: commands.Context,
+    world: str, 
+    expansion: int = nuny.config.conf["def_exp"],
+    silent: bool = False
+):
+    """Check mapping data from Sonar for a world and expansion.
+    
+    Parameters
+    ----------
+    world: str
+        World
+    expansion: int
+        Expansion
+    """
+
+    await ctx.defer(ephemeral=silent)
+
+    if not await cmd_verifier(ctx,expansion=expansion,exprange=range(2,8),silent=silent):
         return
 
-    await bot_log(f"{interaction.user.display_name}: mapping: {world.value} {expansion.value}")
-
-    try:
-        msg=mapping(world.value, expansion.value)
-    except ValueError as ex:
-        await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message("Invalid world.", ephemeral=True)
-        return()
-
-    await interaction.response.send_message(msg, ephemeral=silent)
-
-@nuny.discord_utils.bot.command(name='mapping', aliases=["map",], help='Check mapping data from Sonar')
-async def map_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
-
-    await log_cmd(ctx)
     try:
         msg=mapping(world, expansion)
     except ValueError as ex:
-        await ctx.message.add_reaction("❓")
-        await ctx.send(ex)
-        return()
-    await nuny.discord_utils.ok_reaction(ctx)
-    await ctx.send(msg)
-
-@nuny.discord_utils.bot.tree.command(name="health", description='Check last seen data from Sonar', guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=allexpansionchoices)
-async def hlth_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int], silent: bool = False):
-
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: health: {world.value} {expansion.value}")
-
-    try:
-        msg=health(world.value, expansion.value)
-    except ValueError as ex:
         await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message("Invalid world.", ephemeral=True)
-        return()
+        await ctx.send("Invalid world.", ephemeral=True)
+        return
+    
+    await nuny.discord_utils.ok_reaction(ctx)
+    await ctx.send(msg, ephemeral=silent)
 
-    await interaction.response.send_message(msg, ephemeral=silent)
 
-@nuny.discord_utils.bot.command(name='health', help='Check last seen data from Sonar')
-async def hlth_cmd(ctx,world,expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+
+@bot.hybrid_command(name="health")
+@app_commands.guilds(nuny.discord_utils.guild)
+@app_commands.choices(world=worldchoices, expansion=allexpansionchoices)
+async def hlth_cmd(
+    ctx: commands.Context,
+    world: str, 
+    expansion: int = nuny.config.conf["def_exp"],
+    silent: bool = False
+):
+    """Check last seen data from Sonar for a world and expansion.
+    
+    Parameters
+    ----------
+    world: str
+        World
+    expansion: int
+        Expansion
+    """
+
+    await ctx.defer(ephemeral=silent)
+
+    if not await cmd_verifier(ctx,expansion=expansion,exprange=range(2,8),silent=silent):
         return
 
-    await log_cmd(ctx)
     try:
         msg=health(world, expansion)
     except ValueError as ex:
-        await ctx.message.add_reaction("❓")
-        await ctx.send(ex)
+        await bot_log(f"ValueError: {ex}")
+        await ctx.send("Invalid world.", ephemeral=silent)
         return()
+
     await nuny.discord_utils.ok_reaction(ctx)
-    await ctx.send(msg)
+    await ctx.send(msg, ephemeral=silent)
 
-@nuny.discord_utils.bot.tree.command(name="scout", description='Begin scouting', guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=expansionchoices)
-async def scouting_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int]):
 
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+
+@bot.hybrid_command(name="scout", aliases=['sc', 'scouting'])
+@app_commands.guilds(nuny.discord_utils.guild)
+@app_commands.choices(world=worldchoices, expansion=expansionchoices)
+async def scouting_cmd(
+    ctx: commands.Context,
+    world: str, 
+    expansion: int = nuny.config.conf["def_exp"],
+):
+    """Begin scouting. This will set the world to Scouting.
+    
+    Parameters
+    ----------
+    world: str
+        World
+    expansion: int
+        Expansion
+    """
+
+    await ctx.defer(ephemeral=False)
+
+    if not await cmd_verifier(ctx, expansion=expansion, exprange=range(5,8), silent=False):
         return
-
-    await bot_log(f"{interaction.user.display_name}: scout: {world.value} {expansion.value}")
-
-    try:
-        world=parse_world(world.value)
-    except ValueError as ex:
-        await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message("Invalid world.", ephemeral=True)
-        return()
-
-    try:
-        set_status(world,"Scouting",expansion.value,"last")
-        await interaction.response.send_message(f"✅ {world} {expansion.name} scouting started.")
-    except ValueError as ex:
-        await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
-
-@nuny.discord_utils.bot.command(name='scout', aliases=['sc','scouting'],help='Begin scouting.')
-async def scouting_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
-
-    await log_cmd(ctx)
 
     try:
         world=parse_world(world)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid world.")
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await ctx.send("Invalid world.", ephemeral=False)
         return()
 
     try:
-        set_status(world,"Scouting",expansion, "last")
+        set_status(world,"Scouting",expansion,"last")
         await nuny.discord_utils.ok_reaction(ctx)
-    except ValueError as ex:
-        await ctx.message.add_reaction("❓")
-        await ctx.send(ex)
-
-@nuny.discord_utils.bot.tree.command(name="scend", description='End scouting', guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=expansionchoices)
-async def scoutend_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], expansion: app_commands.Choice[int]):
-
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: scend: {world.value} {expansion.value}")
-
-    try:
-        world=parse_world(world.value)
+        await ctx.send(f"{world} {expansion}.0 scouting started.")
     except ValueError as ex:
         await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message("Invalid world.", ephemeral=True)
-        return()
+        await ctx.send(f"Error: {ex}", ephemeral=False)
 
-    try:
-        set_status(world,"Scouted",expansion.value,"last")
-        await interaction.response.send_message(f"✅ {world} {expansion.name} scouting complete.")
-    except ValueError as ex:
-        await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
 
-@nuny.discord_utils.bot.command(name='scouted', aliases=['scdone','scend'],help='End scouting.')
-async def scoutend_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+
+@bot.hybrid_command(name="scend", aliases=['scdone','scouted'])
+@app_commands.guilds(nuny.discord_utils.guild)
+@app_commands.choices(world=worldchoices, expansion=expansionchoices)
+async def scoutend_cmd(
+    ctx: commands.Context,
+    world: str, 
+    expansion: int = nuny.config.conf["def_exp"],
+):
+    """End scouting.
+    
+    Parameters
+    ----------
+    world: str
+        World
+    expansion: int
+        Expansion
+    """
+
+    await ctx.defer(ephemeral=False)
+
+    if not await cmd_verifier(ctx, expansion=expansion, exprange=range(5,8), silent=False):
         return
 
-    await log_cmd(ctx)
- 
     try:
         world=parse_world(world)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid world.")
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await ctx.send("Invalid world.", ephemeral=False)
         return()
 
     try:
         set_status(world,"Scouted",expansion,"last")
         await nuny.discord_utils.ok_reaction(ctx)
-    except ValueError as ex:
-        await ctx.message.add_reaction("❓")
-        await ctx.send(ex)
-
-@nuny.discord_utils.bot.tree.command(name="run", description='Start train.\n Time can be manually set in form "+15" (minutes) or "15:24" (server time)', guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(time="Start time (optional, UTC/ST)")
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=expansionchoices)
-async def begintrain_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], time: str | None, expansion: app_commands.Choice[int]):
-
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: start: {world.value} {expansion.value} {time}")
-
-    try:
-        world=parse_world(world.value)
+        await ctx.send(f"{world} {expansion}.0 scouting complete.")
     except ValueError as ex:
         await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message("Invalid world.", ephemeral=True)
-        return()
-
-    if time != None:
-        timetext=f" at time {time}"
-    else:
-        timetext=""
-
-    try:
-        set_status(world,"Running",expansion.value,time)
-        await interaction.response.send_message(f"✅ {world} {expansion.name} set to running{timetext}.")
-    except ValueError as ex:
-        await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
+        await ctx.send(f"Error: {ex}", ephemeral=False)
 
 
-@nuny.discord_utils.bot.command(name='start', aliases=['begin','run','go'],help='Start train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
-async def begintrain_cmd(ctx, world, time=None, expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+
+@bot.hybrid_command(name="run",aliases=['begin','start','go'])
+@app_commands.guilds(nuny.discord_utils.guild)
+@app_commands.choices(world=worldchoices, expansion=expansionchoices)
+async def begintrain_cmd(
+    ctx: commands.Context, 
+    world: str, 
+    time: str | None,
+    expansion: int = nuny.config.conf["def_exp"],
+):
+    """Start train. Time can be manually set in form "+15" (minutes) or "15:24" (server time)
+
+    Parameters
+    ----------
+    world: str
+        World
+    time: str | None
+        Start time (optional, UTC/ST)
+    expansion: int
+        Expansion
+    """
+
+    await ctx.defer(ephemeral=False)
+
+    if not await cmd_verifier(ctx, expansion=expansion, exprange=range(5,8), silent=False):
         return
 
-    await log_cmd(ctx)
- 
     try:
         world=parse_world(world)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid world.")
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await ctx.send("Invalid world.", ephemeral=False)
         return()
+    
+    try:
+        (time,expansion)=parse_parameters(time,expansion)
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await ctx.send("Invalid parameters.", ephemeral=False)
+        return()
+
+    timetext=f"<t:{int(time.timestamp())}:R>"
 
     try:
         set_status(world,"Running",expansion,time)
         await nuny.discord_utils.ok_reaction(ctx)
-    except ValueError as ex:
-        await ctx.message.add_reaction("❓")
-        await ctx.send(ex)
-   
-@nuny.discord_utils.bot.tree.command(name="end", description="End train", guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(time="End time (optional, UTC/ST)")
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=expansionchoices)
-async def endtrain_tree(interaction: nuny.discord_utils.discord.Interaction, world: app_commands.Choice[str], time: str | None, expansion: app_commands.Choice[int]):
-
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: end: {world.value} {expansion.value} {time}")
-
-    try:
-        world=parse_world(world.value)
+        await ctx.send(f"{world} {expansion}.0 set to running {timetext}.")
     except ValueError as ex:
         await bot_log(f"ValueError: {ex}")
-        await interaction.response.send_message("Invalid world.", ephemeral=True)
-        return()
-    try:
-        set_status(world,"Dead",expansion.value,time)
-        if time != None:
-            timetext=f" at time {time}"
-        else:
-            timetext=""
-        if nuny.config.conf["sonar"]["enable"]==True:
-            await interaction.response.send_message(f"✅ {world} {expansion.name} set to Dead{timetext}.\n{sonar_stats(world,expansion.value)}")
-        else:
-            await interaction.response.send_message(f"✅ {world} {expansion.name} set to Dead{timetext}.")
-    except ValueError as ex:
-        await interaction.response.send_message(f"Error: {ex}", ephemeral=True)
-        await bot_log(f"ValueError: {ex}")
+        await ctx.send(f"Error: {ex}", ephemeral=False)
 
 
-@nuny.discord_utils.bot.command(name='end', aliases=['done','dead','finish'],help='Finish train.\n Time parameter is optional, defaults to current time and can be manually set in form "+15" (minutes) or "15:24" (server time)')
-async def endtrain_cmd(ctx, world, time=None, expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+
+@bot.hybrid_command(name="end", aliases=['done','dead','finish'])
+@app_commands.guilds(nuny.discord_utils.guild)
+@app_commands.choices(world=worldchoices, expansion=expansionchoices)
+async def endtrain_cmd(
+    ctx: commands.Context, 
+    world: str, 
+    time: str | None, 
+    expansion: int = nuny.config.conf["def_exp"],
+):
+    """End train. Time can be manually set in form "+15" (minutes) or "15:24" (server time)
+    
+    Parameters
+    ----------
+    world: str
+        World
+    time: str | None
+        Start time (optional, UTC/ST)
+    expansion: int
+        Expansion
+    """
+
+    await ctx.defer(ephemeral=False)
+
+    if not await cmd_verifier(ctx, expansion=expansion, exprange=range(5,8), silent=False):
         return
-
-    await log_cmd(ctx)
 
     try:
         world=parse_world(world)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid world.")
+    except ValueError as ex:
+        await bot_log(f"ValueError: {ex}")
+        await ctx.send("Invalid world.", ephemeral=False)
         return()
-
     try:
+        (time,expansion)=parse_parameters(time,expansion)
         set_status(world,"Dead",expansion,time)
         await nuny.discord_utils.ok_reaction(ctx)
+
+        timetext=f"<t:{int(time.timestamp())}:R>"
+
         if nuny.config.conf["sonar"]["enable"]==True:
-            (time,expansion)=parse_parameters(time,expansion) 
-            await scout_log(sonar_stats(world,expansion))
-    except ValueError as ex:
-        await ctx.message.add_reaction("❓")
-        await ctx.send(ex)
-
-@nuny.discord_utils.bot.tree.command(name="status", description="Get train status", guild=nuny.discord_utils.guild)
-@app_commands.describe(expansion="Expansion")
-@app_commands.choices(expansion=expansionchoices)
-async def getstatus_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int], silent: bool = False):
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: status {expansion.value}")
-    try:
-        if int(expansion.value) in range(5,8):
-            msg=get_statuses(expansion.value)
-            await interaction.response.send_message(msg, ephemeral = silent)
+            await ctx.send(f"{world} {expansion}.0 set to Dead {timetext}.\n{sonar_stats(world,expansion)}")
         else:
-            await interaction.response.send_message("Invalid expansion", ephemeral = True)
+            await ctx.send(f"{world} {expansion}.0 set to Dead {timetext}.")
     except ValueError as ex:
-        await interaction.response.send_message(f"Error: {ex}", ephemeral = True)
+        await ctx.send(f"Error: {ex}", ephemeral=True)
         await bot_log(f"ValueError: {ex}")
 
-@nuny.discord_utils.bot.command(name="status", aliases=['getstatus','stat'],help='Get train status')
-async def getstatus_cmd(ctx, expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
 
-    await log_cmd(ctx)
-    try:
-        if int(expansion) in range(5,8):
-            msg=get_statuses(expansion)
-            await ctx.send(msg)
-            await nuny.discord_utils.ok_reaction(ctx)
-        else:
-            await ctx.message.add_reaction("❓")
-            await ctx.send("Invalid expansion")
-    except ValueError:
-        await ctx.send("Invalid expansion")
 
-@nuny.discord_utils.bot.tree.command(name="history", description="Get command history for a world", guild=nuny.discord_utils.guild)
-@app_commands.describe(world="World")
-@app_commands.choices(world=worldchoices)
-@app_commands.describe(expansion="Expansion")
+@bot.hybrid_command(name="status", aliases=['getstatus','stat'])
+@app_commands.guilds(nuny.discord_utils.guild)
 @app_commands.choices(expansion=expansionchoices)
-async def getstatus_tree(interaction: nuny.discord_utils.discord.Interaction, expansion: app_commands.Choice[int], world: app_commands.Choice[str], silent: bool = False):
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: history {expansion.value} {world.value}")
-    try:
-        world=parse_world(world.value)
-    except ValueError as ex:
-        await interaction.response.send_message(f"Error: {ex}", ephemeral = True)
-        await bot_log(f"ValueError: {ex}")
-        return
+async def getstatus_cmd(
+    ctx: commands.Context,
+    expansion: int = nuny.config.conf["def_exp"],
+    silent: bool = False
+):
+    """Get train status for an expansion.
     
-    if expansion.value in range(5,8):
-        msg=get_history(world,expansion.value)
-        await interaction.response.send_message(msg, ephemeral = silent)
-    else:
-        await interaction.response.send_message("Invalid expansion",ephemeral=True)
+    Parameters
+    ----------
+    expansion: int
+        Expansion
+    silent: bool
+        Silent mode
+    """
 
-@nuny.discord_utils.bot.command(name="history", aliases=['hist'],help='Get status history')
-async def gethistory_cmd(ctx, world, expansion=nuny.config.conf["def_exp"]):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
+    await ctx.defer(ephemeral=silent)
+
+    if not await cmd_verifier(ctx, expansion=expansion, exprange=range(5,8), silent=silent):
         return
-    await log_cmd(ctx)
+
+    try:
+        msg=get_statuses(expansion)
+        await nuny.discord_utils.ok_reaction(ctx)
+        await ctx.send(msg, ephemeral = silent)
+    except ValueError as ex:
+        await ctx.send(f"Error: {ex}", ephemeral = silent)
+        await bot_log(f"ValueError: {ex}")
+
+
+
+@bot.hybrid_command(name="history", aliases=['hist'])
+@app_commands.guilds(nuny.discord_utils.guild)
+@app_commands.choices(world=worldchoices, expansion=expansionchoices)
+async def gethistory_cmd(
+    ctx: commands.Context,
+    world: str,
+    expansion: int = nuny.config.conf["def_exp"],
+    silent: bool = False
+):
+    """Get command history for a world.
+    
+    Parameters
+    ----------
+    world: str
+        World
+    expansion: int
+        Expansion
+    silent: bool
+        Silent mode
+    """
+
+    await ctx.defer(ephemeral=silent)
+
+    if not await cmd_verifier(ctx, expansion=expansion, exprange=range(5,8), silent=silent):
+        return
 
     try:
         world=parse_world(world)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid world.")
-        return()
-    
-    if expansion in range(5,8):
-        msg=get_history(world,expansion)
-        await ctx.send(msg)
         await nuny.discord_utils.ok_reaction(ctx)
-    else:
-        await ctx.send("Invalid expansion")
+    except ValueError as ex:
         await ctx.message.add_reaction("❓")
-
-@nuny.discord_utils.bot.tree.command(name="undo", description="Undo a previous status", guild=nuny.discord_utils.guild)
-@app_commands.describe(status="Status ID (get this with /history)")
-async def undo_tree(interaction: nuny.discord_utils.discord.Interaction, status: int):
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+        await ctx.send(f"Error: {ex}", ephemeral = silent)
+        await bot_log(f"ValueError: {ex}")
         return
+    
+    msg=get_history(world,expansion)
+    await ctx.send(msg, ephemeral = silent)
 
-    await bot_log(f"{interaction.user.display_name}: undo {status}")
+
+
+@bot.hybrid_command(name="undo")
+@app_commands.guilds(nuny.discord_utils.guild)
+async def undo_cmd(
+    ctx: commands.Context, 
+    status: int
+):
+    """Undo a previous status.
+    
+    Parameters
+    ----------
+    status: int
+        Status ID (get this with /history)
+    """
+
+    await ctx.defer(ephemeral=False)
+
+    if not await cmd_verifier(ctx, id=status, silent=False):
+        return
 
     nuny.db_utils.delstatus(status)
-    await interaction.response.send_message(f"✅ Status #{status} deleted.")
-
-@nuny.discord_utils.bot.command(name="undo",help="Undo a previous status.")
-async def undo_cmd(ctx,id):
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
-
-    await log_cmd(ctx)
-
-    try:
-        id=int(id)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid ID.")
-        return()
-
-    nuny.db_utils.delstatus(id)
     await nuny.discord_utils.ok_reaction(ctx)
+    await ctx.send(f"Status #{status} deleted.")
 
-@nuny.discord_utils.bot.tree.command(name="adjust", description="Adjust timestamp of a previous status.", guild=nuny.discord_utils.guild)
-@app_commands.describe(status="Status ID (get this with /history)")
-@app_commands.describe(time="Time (UTC/ST)")
-async def adjust_tree(interaction: nuny.discord_utils.discord.Interaction, status: int, time: str):
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+
+
+@bot.hybrid_command(name="adjust", aliases=['fix'])
+@app_commands.guilds(nuny.discord_utils.guild)
+async def adjust_cmd(
+    ctx: commands.Context,
+    status: int, 
+    time: str
+):
+    """Adjust timestamp of a previous status.
+    
+    Parameters
+    ----------
+    status: int
+        Status ID (get this with /history)
+    time: str
+        Time (UTC/ST)
+    """
+
+    await ctx.defer(ephemeral=False)
+
+    if not await cmd_verifier(ctx, id=status, silent=False):
         return
-
-    await bot_log(f"{interaction.user.display_name}: adjust {status} {time}")
 
     time,exp=parse_parameters(time,7)
     nuny.db_utils.settime(status,time)
-    await interaction.response.send_message(f"✅ Status #{status} adjusted to {time}.")
-    
-@nuny.discord_utils.bot.command(name="adjust",aliases=['fix'],help="Adjust timestamp of a previous status.")
-async def adjust_cmd(ctx,id,time):
-
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
-
-    await log_cmd(ctx)
-
-    try:
-        id=int(id)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid ID.")
-        return()
-
-    time,exp=parse_parameters(time,7)
-    nuny.db_utils.settime(id,time)
     await nuny.discord_utils.ok_reaction(ctx)
+    await ctx.send(f"Status #{status} adjusted to {time}.")
+    
 
-@nuny.discord_utils.bot.tree.command(name="reboot", description="Set reboot timer after maintenance.", guild=nuny.discord_utils.guild)
-@app_commands.describe(time="Estimated server reset time (UTC/ST)")
-@app_commands.describe(world="World")
+
+@bot.hybrid_command(name="reboot")
+@app_commands.guilds(nuny.discord_utils.guild)
 @app_commands.choices(world=[app_commands.Choice(name="All", value="All")] + worldchoices)
-async def reboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str, world: app_commands.Choice[str]):
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
+async def reboot_cmd(
+    ctx: commands.Context, 
+    time: str, 
+    world: str = 'All'
+):
+    """Set reboot timer after maintenance. Also clean up pre-maintenance Sonar data.
 
-    await bot_log(f"{interaction.user.display_name}: reboot {time} {world}")
+    Parameters
+    ----------
+    time: str
+        Estimated server reset time (UTC/ST)
+    world: str
+        World
+    """
+
+    await ctx.defer(ephemeral=False)
+
+    if not await cmd_verifier(ctx, silent=False):
+        return
 
     time,exp=parse_parameters(time,7)
 
-    if world.name == 'All':
-        await interaction.response.send_message(f"About to reset all worlds maintenance end to time {time}. Confirm by reacting to this with a ✅.")
+    if world == 'All':
+        msg1 = await ctx.send(f"About to set all worlds maintenance end to time {time} and clean up Sonar history. Confirm by reacting to this with a ✅.")
     else:
-        await interaction.response.send_message(f"About to reset world '{world.name}' maintenance end to time {time}. Confirm by reacting to this with a ✅.")
-    msg1= await interaction.original_response()
+        try:
+            parsed_world = parse_world(world)
+        except ValueError as ex:
+            await ctx.message.add_reaction("❓")
+            await ctx.send(f"Error: {ex}", ephemeral = False)
+            await bot_log(f"ValueError: {ex}")
+            return
+        msg1 = await ctx.send(f"About to set world '{parsed_world}' maintenance end to time {time} and clean up Sonar history. Confirm by reacting to this with a ✅.")
+
     await msg1.add_reaction("✅")
 
     def check(reaction, user):
-        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
+        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
 
     try:
-        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
+        res=await bot.wait_for("reaction_add", check=check,timeout=30)
     except asyncio.TimeoutError:
         logging.debug("Timed out while waiting for reaction.")
         await msg1.edit(content="❌ Timed out. Servers are not reset.")
         await msg1.clear_reactions()
         
     else:
-        if world.name == 'All':
+        if world == 'All':
             maintenance_reboot(time)
-            await msg1.edit(content=f"✅ All servers adjusted for server reboot at {time}.")
+            sonarreset(time)
+            await msg1.edit(content=f"All servers adjusted for server reboot at {time}.")
         else:
-            parsed_world = parse_world(world.value)
             maintenance_reboot(time, parsed_world)
-            await msg1.edit(content=f"✅ World server '{world.name}' adjusted for server reboot at {time}.")
+            sonarreset(time, parsed_world)
+            await msg1.edit(content=f"World server '{parsed_world}' adjusted for server reboot at {time}.")
         await msg1.clear_reactions()
-    
-@nuny.discord_utils.bot.command(name="reboot",help="Set reboot timer after maintenance. Optionally include world at the end")
-async def reboot_cmd(ctx,time, world=None):
-
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
-    await log_cmd(ctx)
-    time,exp=parse_parameters(time,7)
-
-    if world:
-        parsed_world = parse_world(world)
-    else:
-        parsed_world = None
-
-    if parsed_world:
-        msg1=await ctx.send(f"About to reset world '{parsed_world}' maintenance end to time {time}. Confirm by reacting to this with a ✅.")
-    else:
-        msg1=await ctx.send(f"About to reset all worlds maintenance end to time {time}. Confirm by reacting to this with a ✅.")
-
-
-    await msg1.add_reaction("✅")
-
-    def check(reaction, user):
-        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
-
-    try:
-        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
-    except asyncio.TimeoutError:
-        logging.debug("Timed out while waiting for reaction.")
-        await msg1.delete()
-        await ctx.message.add_reaction('❌')
-        
-    else:
-        if parsed_world:
-            maintenance_reboot(time, world)
-            await ctx.send(f"✅ World server '{parsed_world}' adjusted for server reboot at {time}.")
-        else:
-            maintenance_reboot(time)
-            await ctx.send(f"All servers adjusted for server reboot at {time}.")
-        await msg1.delete()
         await nuny.discord_utils.ok_reaction(ctx)
 
-
-@nuny.discord_utils.bot.tree.command(name="sonarcleanup", description="Clean up sonar data that is older than parameter time.", guild=nuny.discord_utils.guild)
-@app_commands.describe(time="Time (UTC/ST)")
-@app_commands.describe(world="World")
-@app_commands.choices(world=[app_commands.Choice(name="All", value="All")] + worldchoices)
-async def sonarboot_tree(interaction: nuny.discord_utils.discord.Interaction, time: str, world: app_commands.Choice[str]):
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
-        return
-
-    await bot_log(f"{interaction.user.display_name}: sonarcleanup {time} {world}")
-    
-    try:
-        time,exp=parse_parameters(time,7)
-    except ValueError:
-        await interaction.response.send_message("❌ invalid time value.")
-        return
-
-    if world.name == 'All':
-        await interaction.response.send_message(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
-    else:
-        await interaction.response.send_message(f"About to erase all sonar info older than {time} for world '{world.name}'. Confirm by reacting to this with a ✅.")
-    msg1= await interaction.original_response()
-    await msg1.add_reaction("✅")
-
-    def check(reaction, user):
-        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == interaction.user.id
-
-    try:
-        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
-    except asyncio.TimeoutError:
-        logging.debug("Timed out while waiting for reaction.")
-        await msg1.edit(content="❌ Timed out. Sonar data not reset.")
-        await msg1.clear_reactions()
-        
-    else:
-        if world.name == 'All':
-            sonarreset(time)
-            await msg1.edit(content=f"✅ All sonar data older than {time} removed.")
-        else:
-            parsed_world = parse_world(world.name)
-            sonarreset(time, parsed_world)
-            await msg1.edit(content=f"✅ All sonar data older than {time} for world '{world.name}' removed.")
-        await msg1.clear_reactions()
-
-@nuny.discord_utils.bot.command(name="sonarcleanup",help="Clean up sonar data that is older than parameter time. Optionally include a world")
-async def sonarboot_cmd(ctx,time, world=None):
-
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
-    await log_cmd(ctx)
-    try:
-        time,exp=parse_parameters(time,7)
-    except ValueError:
-        await ctx.message.add_reaction("❓")
-        await ctx.send("Invalid time.")
-        return()
-
-    if world:
-        parsed_world = parse_world(world)
-    else:
-        parsed_world = None
-
-    if parsed_world:
-        msg1=await ctx.send(f"About to erase all sonar info older than {time} for world '{parsed_world}'. Confirm by reacting to this with a ✅.")
-    else:
-        msg1=await ctx.send(f"About to erase all sonar info older than {time}. Confirm by reacting to this with a ✅.")
-    await msg1.add_reaction("✅")
-
-    def check(reaction, user):
-        return reaction.message.id==msg1.id and str(reaction.emoji)=='✅' and user.id == ctx.author.id
-
-    try:
-        res=await nuny.discord_utils.bot.wait_for("reaction_add", check=check,timeout=30)
-    except asyncio.TimeoutError:
-        logging.debug("Timed out while waiting for reaction.")
-        await msg1.delete()
-        await ctx.message.add_reaction('❌')
-        
-    else:
-        if parsed_world:
-            sonarreset(time, parsed_world)
-            await ctx.send(f"All sonar data older than {time} for world '{parsed_world}' removed.")
-        else:
-            sonarreset(time)
-            await ctx.send(f"All sonar data older than {time} removed.")
-        await msg1.delete()
-        await nuny.discord_utils.ok_reaction(ctx)
 
  
-@nuny.discord_utils.bot.tree.command(name="cleanup", description="Manually clean up over 7 days old statuses. (For staff use)", guild=nuny.discord_utils.guild)
-async def cleanup_tree(interaction: nuny.discord_utils.discord.Interaction):
+@bot.hybrid_command(name="cleanup", guild=nuny.discord_utils.guild)
+async def cleanup_tree(
+    ctx: commands.Context
+):
+    """Manually clean up over 7 days old statuses. (For staff use)"""
 
-    if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        await interaction.response.send_message("This command is unavailable on this channel.", ephemeral=True)
+    await ctx.defer(ephemeral=False)
+
+    if not await cmd_verifier(ctx, silent=False):
         return
 
-    await bot_log(f"{interaction.user.display_name}: cleanup")
-
     r=nuny.db_utils.cleanup()
-    await interaction.response.send_message(f"✅ {r} entries were deleted.")
-
-@nuny.discord_utils.bot.command(name="cleanup",help="Manually clean up over 7 days old statuses. (For staff use)")
-async def cleanup_cmd(ctx):
-
-    if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
-        return
-
-    await log_cmd(ctx)
-
-    r=nuny.db_utils.cleanup()
-    await ctx.send(f"{r} entries were deleted.")
     await nuny.discord_utils.ok_reaction(ctx)
+    await ctx.send(f"{r} entries were deleted.")
                 
+
+
 @nuny.discord_utils.bot.command(name="advertise", 
                                 aliases=['ad','shout','sh'],
                                 help='''Advertise your train. Put multi-part parameters in quotes (eg. .shout twin "Fort Jobb"). 
@@ -709,8 +606,8 @@ async def advertise_cmd(ctx, world, start, expansion=nuny.config.conf["def_exp"]
         await ctx.send("Start location needs to be over 5 characters.")
         return
 
-    tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
-    timestamp=int(mktime(tenmin.timetuple()))
+    tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now(datetime.timezone.utc)
+    timestamp=int(tenmin.timestamp())
 
     try:
         world=parse_world(world)
@@ -718,7 +615,6 @@ async def advertise_cmd(ctx, world, start, expansion=nuny.config.conf["def_exp"]
         await ctx.message.add_reaction("❓")
         await ctx.send("Invalid world.")
         return()
-
 
     try:
         expansion=int(expansion)
@@ -781,6 +677,8 @@ async def advertise_cmd(ctx, world, start, expansion=nuny.config.conf["def_exp"]
                                 help='''Advertise your train. 
                                         Put multi-part parameters in quotes (eg. .mshout "[Twintania] Hunt train starting in 10 minutes at Fort Jobb")''',
                                 ignore_extra=False)
+
+
 
 async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
     if ctx.channel.id!=nuny.config.conf["discord"]["channels"]["bot"]:
@@ -848,6 +746,8 @@ async def madvertise(ctx, message, expansion=nuny.config.conf["def_exp"]):
             await ctx.message.add_reaction('✅')
             await scout_log("Messages sent.")
             
+
+
 @nuny.discord_utils.bot.tree.command(name="shout", description="Advertise your train.", guild=nuny.discord_utils.guild)
 async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
     if interaction.channel_id!=nuny.config.conf["discord"]["channels"]["bot"]:
@@ -918,8 +818,8 @@ async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
         if world==None:
             msg=f"{message} (Conductor: {username})."
         else:
-            tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now()
-            timestamp=int(mktime(tenmin.timetuple()))
+            tenmin=datetime.timedelta(minutes=10)+datetime.datetime.now(datetime.timezone.utc)
+            timestamp=int(tenmin.timestamp())
             msg=f"**[{wname}]** Hunt train starting <t:{timestamp}:R> at {message} (Conductor: {username})."
 
         await modal_interaction.response.send_message(f"About to following message to many servers. Confirm by reacting to this with a ✅ or wait for timeout.")
@@ -944,7 +844,7 @@ async def dvertise_tree(interaction: nuny.discord_utils.discord.Interaction):
             await msg1.clear_reactions()
         else:
             if res:
-                timestamp=int(mktime(datetime.datetime.now().timetuple()))
+                timestamp=int(mktime(datetime.datetime.now(datetime.timezone.utc).timetuple()))
                 await bot_log(f"Sending train advertisement:\n```{msg}```")
                 await msg1.edit(content="<a:doggospin:1227235974535446628> Sending message to many servers.")
 

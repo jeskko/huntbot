@@ -17,7 +17,7 @@ async def groundskeeper():
         for expansion in range(5,8):
             n=w["name"]
             (status,time)=nuny.db_utils.getstatus(n,expansion)
-            td=datetime.datetime.utcnow()-time
+            td=datetime.datetime.now(datetime.timezone.utc)-time
             if status=="Dead" and td>datetime.timedelta(hours=6):
                 nuny.db_utils.setstatus(n,expansion,"Up",time+datetime.timedelta(hours=6))
                 logging.info(f"{n} {expansion}.0 changed to up.")
@@ -31,11 +31,11 @@ async def groundskeeper():
                 # amount of marks in each expansion, adjust this when instances are in use
                 (alive,despawn,spawned,spawning,dead,alive2)=sonar_spec_raw(n,expansion)
                 if status=="Dead" and alive2==nuny.config.conf["marks"][expansion]:
-                    nuny.db_utils.setstatus(n,expansion,"Up",datetime.datetime.utcnow())
+                    nuny.db_utils.setstatus(n,expansion,"Up",datetime.datetime.now(datetime.timezone.utc))
                     logging.info(f"{n} {expansion}.0 changed to up because sonar said that everyone has been seen alive within last 6 hours.")
                     await scout_log(f"{n} {expansion}.0 changed to up because Sonar data indicates that all marks are up.")
                 if (status=="Running" or status=="Up" or status=="Scouting" or status=="Scouted") and dead==nuny.config.conf["marks"][expansion]:    
-                    nuny.db_utils.setstatus(n,expansion,"Dead",datetime.datetime.utcnow())
+                    nuny.db_utils.setstatus(n,expansion,"Dead",datetime.datetime.now(datetime.timezone.utc))
                     logging.info(f"{n} {expansion}.0 changed to dead because sonar said that everyone is dead.")
                     await scout_log(f"{n} {expansion}.0 changed to dead because Sonar data indicates that all marks are dead.")
                     if nuny.config.conf["sonar"]["enable"]==True:
@@ -71,7 +71,7 @@ def set_status(world,status,expansion,time=None):
     return
 
 def process_despawn(status,time):
-    td=datetime.datetime.utcnow()-time
+    td=datetime.datetime.now(datetime.timezone.utc)-time
     ts=td.total_seconds()
     start=0
     end=0
@@ -119,7 +119,7 @@ def get_statuses(expansion):
             t1=""
         else:
             t1=datetime.datetime.strftime(time,"%d.%m %H:%M")
-        t2_td=datetime.datetime.utcnow()-time
+        t2_td=datetime.datetime.now(datetime.timezone.utc)-time
         t2_h=int(divmod(t2_td.total_seconds(),3600)[0])
         t2_m=int(divmod(divmod(t2_td.total_seconds(),3600)[1],60)[0])
         if t2_h<0:
@@ -197,7 +197,7 @@ def delta_to_words(delta):
 def spec_delta(time,start_s,end_s,type):
     """Format timedelta and status to words."""
     
-    now=datetime.datetime.utcnow()
+    now=datetime.datetime.now(datetime.timezone.utc)
     start=time+datetime.timedelta(seconds=start_s)-now
     end=time+datetime.timedelta(seconds=end_s)-now
     st=delta_to_words(start)
@@ -271,8 +271,10 @@ def parse_parameters(time,expansion):
     Tries to sanitize time and legacy parameters given on a bot command.
     Will raise ValueError if input is incoherent.
     """
+    if type(time) is datetime.datetime:
+        return (time,expansion)
     if time==None:
-            time=datetime.datetime.utcnow()
+            time=datetime.datetime.now(datetime.timezone.utc)
 
             if expansion==None:
                 exp=nuny.config.conf["def_exp"]
@@ -284,21 +286,21 @@ def parse_parameters(time,expansion):
                 exp=int(time)
             except:
                 raise ValueError("Invalid non-numeric expansion")    
-            time=datetime.datetime.utcnow()              
+            time=datetime.datetime.now(datetime.timezone.utc)
         else:
             try:
                 if time[0]=="+":
-                    time=datetime.timedelta(minutes=int(time[1:]))+datetime.datetime.utcnow()
+                    time=datetime.timedelta(minutes=int(time[1:]))+datetime.datetime.now(datetime.timezone.utc)
                 else:
                     if time[0]=="-":
-                        time=datetime.timedelta(minutes=-int(time[1:]))+datetime.datetime.utcnow()     
+                        time=datetime.timedelta(minutes=-int(time[1:]))+datetime.datetime.now(datetime.timezone.utc)
                     else:              
                         t=time.split(":")
 
                         if len(t)==2:
                             h=int(t[0])
                             m=int(t[1][0:2])
-                            time=datetime.datetime.utcnow().replace(hour=h,minute=m,second=45)
+                            time=datetime.datetime.now(datetime.timezone.utc).replace(hour=h,minute=m,second=45)
                             if len(t[1])==4:
                                 if t[1][2]=="-":
                                     time=datetime.timedelta(days=-int(t[1][3]))+time
