@@ -62,7 +62,7 @@ async def post_webhooks(msg, expansion):
     logging.debug("post_webhooks start")
     await bot_log("post_webhooks start")
     allowed_roles=discord.AllowedMentions(everyone=False, users=False, roles=True)
-    sem=asyncio.Semaphore(7)
+    sem=asyncio.Semaphore(15)
 
     async def send_webhook(w):
         r=w["roles"][expansion]
@@ -72,7 +72,6 @@ async def post_webhooks(msg, expansion):
             rtxt=f"<@&{r}> " if r > 1 else ""
             msgtxt=f"{rtxt}{msg}"
             logging.debug(f'Sending to {w["name"]}')
-            await bot_log(f'Sending to {w["name"]}')
             try:
                 webhook=discord.Webhook.from_url(w["webhook"], session=session)
                 await webhook.send(
