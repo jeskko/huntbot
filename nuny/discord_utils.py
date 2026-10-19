@@ -1,5 +1,5 @@
 import discord,aiohttp,logging
-import sys,traceback
+import sys,traceback,asyncio
 
 from discord.ext import commands
 
@@ -62,24 +62,32 @@ async def post_webhooks(msg, expansion):
     logging.debug("post_webhooks start")
     await bot_log("post_webhooks start")
     allowed_roles=discord.AllowedMentions(everyone=False, users=False, roles=True)
-    for w in nuny.config.conf["webhooks"]:
-        wh=w["webhook"]
+    sem=asyncio.Semaphore(10)
+
+    async def send_webhook(w):
         r=w["roles"][expansion]
-        if r!=0:
-            rtxt=""
-            if r>1:
-                rtxt=f"<@&{r}> "                
+        if r==0:
+            return
+        async with sem:
+            rtxt=f"<@&{r}> " if r > 1 else ""
+            msgtxt=f"{rtxt}{msg}"
             logging.debug(f'Sending to {w["name"]}')
             await bot_log(f'Sending to {w["name"]}')
-            msgtxt=f"{rtxt}{msg}"
-            async with aiohttp.ClientSession() as session:
+            try:
                 webhook=discord.Webhook.from_url(w["webhook"], session=session)
-                try:
-                    await webhook.send(content=msgtxt,username="Nunyunuwi",avatar_url="https://jvaarani.kapsi.fi/nuny.png",allowed_mentions=allowed_roles)                        
-                except (discord.errors.HTTPException,discord.errors.NotFound) as e:
-                    logging.error(f'Unable to send message to {w["name"]}: {e}')
-                    await bot_log(f'Unable to send message to {w["name"]}: {e}')
-                    pass
+                await webhook.send(
+                    content=msgtxt,
+                    username="Nunyunuwi",
+                    avatar_url="https://jvaarani.kapsi.fi/nuny.png",
+                    allowed_mentions=allowed_roles
+                )                        
+            except (discord.errors.HTTPException,discord.errors.NotFound) as e:
+                logging.error(f'Unable to send message to {w["name"]}: {e}')
+                await bot_log(f'Unable to send message to {w["name"]}: {e}')
+
+    async with aiohttp.ClientSession() as session:
+        tasks = [send_webhook(w) for w in nuny.config.conf["webhooks"]]
+        await asyncio.gather(*tasks)
     await bot_log("post_webnhooks end")
                 
 async def check_messages():
