@@ -101,42 +101,42 @@ def sonar_spec_raw(w,exp):
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastfound < datetime('now', '-22 hours') AND lastfound > datetime('now', '-48 hours') AND currenthp!=0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND datetime(lastfound) < datetime('now', '-22 hours') AND datetime(lastfound) > datetime('now', '-48 hours') AND currenthp!=0
         """        
     # marks alive, last 18 hours
     sel_alive="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastfound > datetime('now', '-22 hours') AND currenthp!=0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND datetime(lastfound) > datetime('now', '-22 hours') AND currenthp!=0
         """
     # marks alive, seen within last 6 hours
     sel_alive2="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastfound > datetime('now', '-6 hours') AND currenthp!=0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND datetime(lastfound) > datetime('now', '-6 hours') AND currenthp!=0
         """        
     # marks that should have respawned but no sighting
     sel_spawned="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-20 hours') AND lastkilled < datetime('now','-6 hours') AND currenthp=0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND datetime(lastkilled) > datetime('now','-20 hours') AND datetime(lastkilled) < datetime('now','-6 hours') AND currenthp=0
             """
     # marks killed during last 6 hours
     sel_spawning="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-6 hours') AND lastkilled < datetime('now','-4 hours') AND currenthp=0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND datetime(lastkilled) > datetime('now','-6 hours') AND datetime(lastkilled) < datetime('now','-4 hours') AND currenthp=0
             """
     # marks killed during last 4 hours
     sel_dead="""
 SELECT count(*) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastkilled > datetime('now','-4 hours') AND currenthp=0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND datetime(lastkilled) > datetime('now','-4 hours') AND currenthp=0
         """
 
     exp=exp-1
