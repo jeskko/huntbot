@@ -245,7 +245,7 @@ SELECT hunts.name, zones.name,hunt.instanceid,
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
 INNER JOIN zones on zones.id=hunt.zoneid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastseen > datetime('now','-20 hours') AND lastfound > datetime('now','-20 hours') AND currenthp != 0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND datetime(lastseen) > datetime('now','-20 hours') AND datetime(lastfound) > datetime('now','-20 hours') AND currenthp != 0
 ORDER BY hunt.zoneid,hunt.instanceid
         """
     nuny.db_utils.cursor.execute(sel,(exp-1,w))
@@ -292,7 +292,7 @@ SELECT hunts.name, zones.name,hunt.instanceid,
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
 INNER JOIN zones on zones.id=hunt.zoneid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND lastseen > datetime('now','-20 hours') AND lastfound > datetime('now','-20 hours') AND currenthp != 0
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND datetime(lastseen) > datetime('now','-20 hours') AND datetime(lastfound) > datetime('now','-20 hours') AND currenthp != 0
 ORDER BY hunt.zoneid,hunt.instanceid
         """
     nuny.db_utils.cursor.execute(sel,(exp-1,w))
@@ -328,7 +328,7 @@ def sonar_stats(world,exp):
 SELECT round(avg(players)),min(players),max(players) from hunt 
 INNER JOIN hunts on hunts.id = hunt.huntid 
 INNER JOIN worlds on worlds.id=hunt.worldid 
-WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND lastkilled > datetime('now', '-45 minutes') AND players>10
+WHERE hunts.expansion=? AND hunts.rank=2 AND worlds.name=? AND currenthp=0 AND datetime(lastkilled) > datetime('now', '-45 minutes') AND players>10
             """
 
     exp=exp-1
