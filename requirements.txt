@@ -15,5 +15,5 @@ PyYAML==6.0.3
 requests==2.34.2
 tabulate==0.10.0
 urllib3==2.8.0
-websockets==17.2
+websockets==17.3
 yarl==1.25.1
