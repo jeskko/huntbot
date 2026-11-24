@@ -11,7 +11,7 @@ frozenlist==1.8.0
 idna==3.20
 multidict==7.2.1
 propcache==0.5.4
-PyYAML==6.0.3
+PyYAML==6.0.4
 requests==2.34.2
 tabulate==0.10.0
 urllib3==2.8.0
